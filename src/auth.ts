@@ -1,74 +1,107 @@
-// This new file contains your core NextAuth v5 configuration.
-
+// src/auth.ts
 import NextAuth from 'next-auth';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prisma';
+import type { NextAuthConfig } from 'next-auth'; // Import correct type
+import { UserRole } from '@prisma/client'; // Assuming roles will be used
+import type { JWT } from "next-auth/jwt";
+import type { Session, User } from "next-auth";
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
-  // Configure the Prisma adapter
+
+export const authOptions: NextAuthConfig = { // Use NextAuthConfig
   adapter: PrismaAdapter(prisma),
-
-  // Configure one or more providers
   providers: [
     Credentials({
-      // The name to display on the sign in form (e.g. "Sign in with...")
       name: 'Credentials',
       credentials: {
-        email: { label: 'Email', type: 'text', placeholder: 'user@email.com' },
+        email: { label: 'Email', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        // This is where you retrieve the user from the database and check the password.
-        // credentials object is already parsed and validated by Zod
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error('Missing credentials');
+        // --- START DEBUG LOGGING ---
+        console.log("--- AUTHORIZE FUNCTION START ---");
+        console.log("Received credentials object:", credentials);
+
+        if (
+          !credentials ||
+          typeof credentials.email !== 'string' ||
+          typeof credentials.password !== 'string'
+        ) {
+          console.log("Authorize Error: Invalid credentials format or missing fields.");
+          console.log("--- AUTHORIZE FUNCTION END (Error) ---");
+          // Throwing error is better for Credentials provider
+          throw new Error('Invalid credentials format');
         }
+
+        const email = credentials.email;
+        const password = credentials.password;
+
+        console.log(`Attempting login for email: ${email}`);
 
         const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email as string,
-          },
+          where: { email: email },
         });
 
-        // If no user is found, or if the user doesn't have a hashed password
-        // (e.g., they signed up with OAuth), throw an error.
-        if (!user || !user.hashedPassword) {
-          throw new Error('Invalid credentials');
+        if (!user) {
+          console.log("Authorize Error: User not found in database.");
+          console.log("--- AUTHORIZE FUNCTION END (Error) ---");
+          throw new Error('Invalid credentials'); // Use generic error
         }
 
-        // Check if the passwords match
+        if (!user.hashedPassword) {
+          console.log("Authorize Error: User found but has no hashedPassword field set.");
+          console.log("--- AUTHORIZE FUNCTION END (Error) ---");
+          throw new Error('Invalid credentials'); // Use generic error
+        }
+
+        console.log("Password from login form:", `"${password}"`); // Log with quotes
+        console.log("Hashed password from DB:", `"${user.hashedPassword}"`); // Log with quotes
+
         const isCorrectPassword = await bcrypt.compare(
-          credentials.password as string,
+          password,
           user.hashedPassword
         );
 
         if (!isCorrectPassword) {
-          throw new Error('Invalid credentials');
+          console.log("Password comparison FAILED.");
+          console.log("--- AUTHORIZE FUNCTION END (Error) ---");
+          throw new Error('Invalid credentials'); // Use generic error
         }
 
-        // If everything is correct, return the user object.
-        // NextAuth will then create a session.
-        return user;
+        console.log("Password comparison SUCCESS!");
+        console.log("--- AUTHORIZE FUNCTION END (Success) ---");
+        return user; // Return user object on success
+        // --- END DEBUG LOGGING ---
       },
     }),
-    // ...add more providers here if you want (e.g., Google, GitHub)
   ],
-
-  // Configure session strategy
   session: {
     strategy: 'jwt',
   },
-
-  // Secret for JWT
-  secret: process.env.NEXTAUTH_SECRET, // Make sure to set this in your .env file
-
-  // Custom pages
+  secret: process.env.AUTH_SECRET, // Make sure this matches .env.local
   pages: {
-    signIn: '/', // We'll show the login form on the homepage
+    signIn: '/',
   },
-
-  // Debugging
+  callbacks: {
+    // Callbacks to include role/id (if using roles later)
+    async jwt({ token, user }: { token: JWT; user?: User }) {
+      if (user) {
+        token.id = user.id;
+        // token.role = (user as any).role; // Uncomment if you add roles
+      }
+      return token;
+    },
+    async session({ session, token }: { session: Session; token: JWT }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        // (session.user as any).role = token.role as UserRole; // Uncomment if you add roles
+      }
+      return session;
+    },
+  },
   debug: process.env.NODE_ENV === 'development',
-});
+};
+
+export const { handlers, signIn, signOut, auth } = NextAuth(authOptions);

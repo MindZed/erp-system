@@ -21,9 +21,16 @@ model User {
   hashedPassword String? // Field to store the hashed password
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  role          UserRole  @default(USER)
 
   accounts Account[]
   sessions Session[]
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  USER
 }
 
 // NextAuth required models

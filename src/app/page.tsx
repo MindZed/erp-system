@@ -1,10 +1,12 @@
+// src/app/page.tsx
 'use client';
 
 import { useState } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link'; // Import Link for dashboard navigation
 
-// A simple form component
+// --- Sub-component: AuthForm ---
 const AuthForm = ({
   isSignUp = false,
   onSubmit,
@@ -15,11 +17,32 @@ const AuthForm = ({
   return (
     <form
       onSubmit={onSubmit}
-      className="space-y-4 bg-white p-8 rounded-lg shadow-md"
+      className="space-y-4 bg-white p-8 rounded-lg shadow-md text-gray-900"
     >
       <h2 className="text-2xl font-bold text-center text-gray-800">
         {isSignUp ? 'Sign Up' : 'Sign In'}
       </h2>
+
+      {/* Name Field (only for sign up) */}
+      {isSignUp && (
+        <div>
+          <label
+            htmlFor="name"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Name
+          </label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            required
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-900"
+          />
+        </div>
+      )}
+
+      {/* Email Field */}
       <div>
         <label
           htmlFor="email"
@@ -32,9 +55,11 @@ const AuthForm = ({
           id="email"
           name="email"
           required
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-900"
         />
       </div>
+
+      {/* Password Field */}
       <div>
         <label
           htmlFor="password"
@@ -47,9 +72,11 @@ const AuthForm = ({
           id="password"
           name="password"
           required
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-900"
         />
       </div>
+
+      {/* Submit Button */}
       <button
         type="submit"
         className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -60,6 +87,7 @@ const AuthForm = ({
   );
 };
 
+// --- Main Page Component ---
 export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -77,16 +105,26 @@ export default function Home() {
     const email = target.email.value;
     const password = target.password.value;
 
+    // Client-side validation
+    if (!email || !password) {
+        setError("Email and password are required.");
+        return;
+    }
+
     const result = await signIn('credentials', {
-      redirect: false, // We'll handle redirect manually
+      redirect: false, // Handle redirect manually
       email,
       password,
     });
 
     if (result?.error) {
-      setError('Invalid email or password. Please try again.');
+      // Use the error message from Auth.js if available, otherwise default
+      setError(result.error === 'CredentialsSignin' ? 'Invalid email or password.' : result.error);
     } else if (result?.ok) {
-      router.push('/dashboard'); // Redirect to a dashboard page on success
+      router.push('/dashboard'); // Redirect on success
+    } else {
+      // Handle cases where result is null or !ok without specific error
+      setError('Login failed. Please try again.');
     }
   };
 
@@ -95,52 +133,68 @@ export default function Home() {
     e.preventDefault();
     setError(null);
     const target = e.target as typeof e.target & {
+      name: { value: string };
       email: { value: string };
       password: { value: string };
     };
+    const name = target.name.value;
     const email = target.email.value;
     const password = target.password.value;
 
+    // Client-side validation
+    if (!name || !email || !password) {
+        setError("Name, email and password are required.");
+        return;
+    }
+
     try {
+      // Call the registration API route
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ name, email, password }),
       });
 
       if (res.ok) {
-        // Automatically sign in the user after successful registration
-        // We pass the event object directly
-        await handleLogin(e);
+        // Registration successful! Show login form and success message.
+        setIsSigningUp(false); // Switch view to login form
+        alert('Registration successful! Please log in.'); // Give user feedback
+        // No automatic login, user needs to manually log in now.
       } else {
+        // Handle API errors (like "User already exists")
         const data = await res.json();
         setError(data.message || 'Something went wrong during sign-up.');
       }
     } catch (err) {
-      setError('An unexpected error occurred.');
+      console.error("Signup fetch error:", err); // Log the error for debugging
+      setError('An unexpected error occurred. Please try again.');
     }
   };
 
+  // --- Loading State ---
   if (status === 'loading') {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center text-gray-900">
         Loading...
       </div>
     );
   }
 
-  // --- Show authenticated state ---
+  // --- Authenticated State ---
   if (session) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center space-y-6">
+      <div className="flex min-h-screen flex-col items-center justify-center space-y-6 text-gray-900">
         <h1 className="text-3xl font-bold">
-          Welcome, {session.user?.email}
+          Welcome, {session.user?.name || session.user?.email}
         </h1>
         <p>You are signed in.</p>
+        <Link href="/dashboard" className="text-blue-600 hover:underline">
+            Go to Dashboard
+        </Link>
         <button
-          onClick={() => signOut()}
+          onClick={() => signOut({ callbackUrl: '/' })} // Redirect to home on sign out
           className="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
         >
           Sign Out
@@ -149,7 +203,7 @@ export default function Home() {
     );
   }
 
-  // --- Show Login/Sign Up forms ---
+  // --- Login/Sign Up Forms ---
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <div className="w-full max-w-md space-y-6">
@@ -177,4 +231,3 @@ export default function Home() {
     </div>
   );
 }
-
