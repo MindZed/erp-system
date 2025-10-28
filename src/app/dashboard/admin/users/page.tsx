@@ -6,13 +6,29 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { UserRole } from '@prisma/client';
 import DeleteUserButton from './components/DeleteUserButton'; 
+// FIX: Corrected import path to the shared components folder
+import ClientNotificationBar from '../../../components/ClientNotificationBar'; 
 
-export default async function UsersListPage() {
+// Define expected props including searchParams from the URL
+interface UsersListPageProps {
+    searchParams: {
+        status?: string;
+        name?: string;
+        message?: string;
+        action?: string; 
+    };
+}
+
+export default async function UsersListPage(props: UsersListPageProps) {
   const session = await auth();
   if (!session || !session.user || (session.user as any).role !== UserRole.ADMIN) {
     redirect('/dashboard'); 
   }
 
+  // Use Promise.resolve and await to satisfy the strict Next.js compiler check
+  const { status, name, message, action } = await Promise.resolve(props.searchParams);
+  
+  // Fetch all system users directly on the server
   const users = await prisma.user.findMany({
     orderBy: { createdAt: 'asc' },
     select: {
@@ -36,6 +52,9 @@ export default async function UsersListPage() {
         </Link>
       </div>
 
+      {/* Display the notification bar */}
+      <ClientNotificationBar status={status} name={name} message={message} action={action} />
+
       <div className="bg-white shadow overflow-hidden sm:rounded-lg">
         {users.length === 0 ? (
           <p className="p-4 text-center text-gray-500">No system users found.</p>
@@ -48,7 +67,6 @@ export default async function UsersListPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                 
-                {/* Center the Actions Header */}
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -66,27 +84,21 @@ export default async function UsersListPage() {
                     {new Date(user.createdAt).toLocaleDateString()}
                   </td>
                   
-                  {/* FIX 2: Individual Action Boxes */}
                   <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                     <div className="flex justify-center items-center space-x-2">
                       
-                      {/* Edit Link - Wrapped in a Box */}
                       <Link 
                         href={`/dashboard/admin/users/${user.id}/edit`} 
-                        className="text-indigo-600 hover:bg-gray-100 p-1 border border-gray-300 rounded-md transition duration-100"
+                        className="text-indigo-600 hover:bg-indigo-50 p-1 border border-indigo-200 rounded-md transition duration-100 text-xs"
                       >
                         Edit
                       </Link>
                       
-                      {/* Vertical Separator */}
                       <span className="text-gray-400">|</span>
                       
-                      {/* Delete Button - Wrapped in a Box */}
-                      {/* Note: DeleteUserButton is already a button, so we apply box styles to it */}
                       <DeleteUserButton 
                         userId={user.id} 
-                        // Apply box styles to the Delete component's root button
-                        className="text-red-600 hover:bg-gray-100 p-1 border border-gray-300 rounded-md transition duration-100"
+                        className="p-1 border border-red-200 rounded-md hover:bg-red-50 text-xs"
                       />
                     </div>
                   </td>
