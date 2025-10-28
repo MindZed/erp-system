@@ -1,6 +1,6 @@
-// This is your Prisma schema file.
-// Make sure to set your database URL in a .env file
-// DATABASE_URL="postgresql://user:password@localhost:5432/erp"
+// prisma/schema.prisma
+
+// --- CONFIGURATION ---
 
 datasource db {
   provider = "postgresql"
@@ -11,18 +11,25 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// User model
+// ----------------------------------------------------
+// 1. AUTHENTICATION & USER MANAGEMENT MODELS
+// ----------------------------------------------------
+
+// User model (System employees/team members)
 model User {
   id            String    @id @default(cuid())
   name          String?
   email         String?   @unique
-  emailVerified DateTime?
+  emailVerified DateTime? @map("emailVerified")
   image         String?
-  hashedPassword String? // Field to store the hashed password
+  hashedPassword String? // For credentials login
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  role          UserRole  @default(USER)
 
+  // Permissions (from previous steps)
+  role          UserRole  @default(EMPLOYEE)
+
+  // Auth Relations (required by adapter)
   accounts Account[]
   sessions Session[]
 }
@@ -30,19 +37,37 @@ model User {
 enum UserRole {
   ADMIN
   MANAGER
-  USER
+  EMPLOYEE
 }
 
-// NextAuth required models
+model Client {
+  id        String    @id @default(cuid())
+  name      String    @unique 
+  contactEmail String? 
+  phone     String?
+  status    ClientStatus @default(ACTIVE)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum ClientStatus {
+  ACTIVE
+  ON_HOLD
+  INACTIVE
+}
+// --- END CLIENT MODEL ---
+
+// --- NextAuth Required Adapter Models (No changes) ---
 model Account {
   id                String  @id @default(cuid())
   userId            String
   type              String
   provider          String
-  providerAccountId String
+  providerAccountId String  @map("providerAccountId")
   refresh_token     String?
   access_token      String?
-  expires_at        Int?
+  expires_at        Int?    @map("expires_at")
   token_type        String?
   scope             String?
   id_token          String?
@@ -51,14 +76,18 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@map("Account")
 }
 
 model Session {
   id           String   @id @default(cuid())
-  sessionToken String   @unique
+  sessionToken String   @unique @map("sessionToken")
   userId       String
   expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("Session")
 }
 
 model VerificationToken {
@@ -67,4 +96,5 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+  @@map("VerificationToken")
 }
