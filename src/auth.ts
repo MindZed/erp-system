@@ -1,74 +1,101 @@
-// This new file contains your core NextAuth v5 configuration.
+// src/auth.ts
 
 import NextAuth from 'next-auth';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prisma';
+import type { NextAuthConfig } from 'next-auth';
+import { UserRole } from '@prisma/client'; 
+import type { JWT } from "next-auth/jwt";
+import type { Session, User } from "next-auth";
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+
+export const authOptions: NextAuthConfig = {
   // Configure the Prisma adapter
   adapter: PrismaAdapter(prisma),
 
   // Configure one or more providers
   providers: [
     Credentials({
-      // The name to display on the sign in form (e.g. "Sign in with...")
       name: 'Credentials',
+      // Define the expected fields for Auth.js to parse the request body/form data
       credentials: {
-        email: { label: 'Email', type: 'text', placeholder: 'user@email.com' },
+        email: { label: 'Email', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        // This is where you retrieve the user from the database and check the password.
-        // credentials object is already parsed and validated by Zod
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error('Missing credentials');
+        
+        // 1. Basic validation and type check
+        if (
+          !credentials ||
+          typeof credentials.email !== 'string' ||
+          typeof credentials.password !== 'string'
+        ) {
+          // Throwing an error here ensures the client-side error message is triggered
+          throw new Error('Invalid credentials format');
         }
 
+        const email = credentials.email;
+        const password = credentials.password;
+        
+        // 2. Find the user in the database
         const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email as string,
-          },
+          where: { email: email },
         });
 
-        // If no user is found, or if the user doesn't have a hashed password
-        // (e.g., they signed up with OAuth), throw an error.
+        // 3. Check if user exists or has a password set
         if (!user || !user.hashedPassword) {
           throw new Error('Invalid credentials');
         }
 
-        // Check if the passwords match
-        const isCorrectPassword = await bcrypt.compare(
-          credentials.password as string,
+        // 4. Compare the passwords securely
+        const passwordsMatch = await bcrypt.compare(
+          password,
           user.hashedPassword
         );
 
-        if (!isCorrectPassword) {
+        if (!passwordsMatch) {
           throw new Error('Invalid credentials');
         }
 
-        // If everything is correct, return the user object.
-        // NextAuth will then create a session.
+        // 5. Success! Return the user object.
         return user;
       },
     }),
-    // ...add more providers here if you want (e.g., Google, GitHub)
   ],
 
-  // Configure session strategy
   session: {
     strategy: 'jwt',
   },
-
-  // Secret for JWT
-  secret: process.env.NEXTAUTH_SECRET, // Make sure to set this in your .env file
-
-  // Custom pages
+  
+  secret: process.env.AUTH_SECRET, 
+  
   pages: {
-    signIn: '/', // We'll show the login form on the homepage
+    signIn: '/login', // Official login page for the ERP
   },
 
-  // Debugging
+  callbacks: {
+    // 1. JWT Callback: Adds custom user data (id and role) to the encrypted token
+    async jwt({ token, user }: { token: JWT; user?: User }) {
+      if (user) {
+        token.id = user.id;
+        token.role = (user as any).role; 
+      }
+      return token;
+    },
+    // 2. Session Callback: Exposes the data from the JWT to the client/server session object
+    async session({ session, token }: { session: Session; token: JWT }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        (session.user as any).role = token.role as UserRole; 
+      }
+      return session;
+    },
+  },
+
   debug: process.env.NODE_ENV === 'development',
-});
+};
+
+// Export the necessary Auth.js functions and handlers
+export const { handlers, signIn, signOut, auth } = NextAuth(authOptions);
