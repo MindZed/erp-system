@@ -33,7 +33,7 @@ const isLinkVisible = (linkRole: UserRole | null, userRole: UserRole): boolean =
 
 export default function Sidebar({ userRole }: SidebarProps) {
     return (
-        <div className="w-64 bg-indigo-800 text-white flex flex-col p-4 space-y-4">
+        <div className="w-64 bg-gray-800 text-white flex flex-col p-4 space-y-4">
             <div className="text-2xl font-extrabold mb-8 text-white">
                 MindZed ERP
             </div>
