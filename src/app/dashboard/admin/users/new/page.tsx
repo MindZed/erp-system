@@ -2,7 +2,7 @@
 'use client';
 
 import { useActionState } from 'react';
-import { createUser } from '@/actions/admin/user.actions'; 
+import { createUser } from '@/actions/admin/user.actions';
 import Link from 'next/link';
 import { UserRole } from '@prisma/client';
 import { useEffect, useRef, useState } from 'react'; // Import necessary hooks

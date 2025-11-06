@@ -6,7 +6,7 @@ import { useSession, signIn, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 // Path is 1 level up (from login to app, then into components)
-import AuthForm from '../components/AuthForm'; 
+import AuthForm from '../../components/AuthForm'; 
 
 // --- Helper to render the Authenticated State ---
 const AuthenticatedContent = ({ session, signOut }: { session: any, signOut: any }) => (
@@ -59,14 +59,15 @@ export default function LoginPage() {
     } else if (result?.ok) {
       router.push('/dashboard');
     } else {
-      setError('Login failed. Please try again.');
+      setError('Login failed. Please try again' );
+      console.log(result);
     }
   };
 
   if (status === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center text-gray-900">
-        Loading...
+        Loading...Please wait!
       </div>
     );
   }

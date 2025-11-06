@@ -8,8 +8,8 @@ import AuthProvider from './components/AuthProvider';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'My ERP System',
-  description: 'Built with Next.js, Prisma, and NextAuth',
+  title: 'Mindzed Infinity',
+  description: 'Built with Love',
 };
 
 export default function RootLayout({

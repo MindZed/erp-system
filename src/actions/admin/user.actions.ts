@@ -11,6 +11,9 @@ interface UserFormState {
   message: string;
   isSuccess: boolean; 
 }
+interface ClientFormState {
+  message: string;
+}
 
 interface DeleteActionResult {
     success: boolean;
@@ -67,14 +70,14 @@ export async function createUser(prevState: UserFormState, formData: FormData): 
 // 2. UPDATE USER (REMAINS THE SAME)
 // ====================================================
 
-export async function updateUser(prevState: UserFormState, formData: FormData): Promise<UserFormState> {
+export async function updateUser(prevState: ClientFormState, formData: FormData): Promise<ClientFormState> {
   const userId = formData.get('id') as string;
   const name = formData.get('name') as string;
   const email = formData.get('email') as string;
   const role = formData.get('role') as UserRole;
 
   if (!userId || !email || !name || !role) {
-    return { message: 'Error: Missing required fields for update.', isSuccess: false };
+    return { message: 'Error: Missing required fields for update.'};
   }
   
   try {
@@ -123,6 +126,7 @@ export async function deleteUser(userId: string): Promise<DeleteActionResult> {
         select: { name: true }
     });
     const userName = user?.name || 'User'; 
+    
 
     await prisma.user.delete({
       where: { id: userId },
