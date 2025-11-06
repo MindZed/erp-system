@@ -33,7 +33,7 @@ export async function createClient(
   formData: FormData
 ): Promise<ClientFormState> {
   try {
-    checkAuth();
+    await checkAuth();
 
     const name = formData.get("name") as string;
     const contactEmail = formData.get("contactEmail") as string;
@@ -78,7 +78,7 @@ export async function updateClient(
   formData: FormData
 ): Promise<ClientFormState> {
   try {
-    checkAuth();
+    await checkAuth();
 
     const userId = formData.get("id") as string;
     const name = formData.get("name") as string;
@@ -125,7 +125,7 @@ export async function deleteClient(
   userId: string
 ): Promise<DeleteActionResult> {
   try {
-    checkAuth();
+    await checkAuth();
 
     if (!userId) {
       redirect(

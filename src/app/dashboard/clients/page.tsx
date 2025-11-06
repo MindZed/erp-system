@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import { ClientStatus } from "@prisma/client";
 import Link from "next/link";
 import DeleteTargetButton from "@/app/components/crud/DeleteTargetButton";
+import ClientNotificationBar from "@/app/components/ClientNotificationBar";
 
 interface ClientListPageProps {
   searchParams: {
@@ -13,6 +14,10 @@ interface ClientListPageProps {
 }
 
 const ClientListPage = async (props: ClientListPageProps) => {
+  const { status, name, message, action } = await Promise.resolve(
+    props.searchParams
+  );
+
   const clients = await prisma.client.findMany({
     orderBy: { createdAt: "desc" },
     select: {
@@ -29,13 +34,20 @@ const ClientListPage = async (props: ClientListPageProps) => {
     <div className="p-8 text-gray-500">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Clients ({clients.length})</h1>
-        <Link 
-          href="/dashboard/clients/new" 
+        <Link
+          href="/dashboard/clients/new"
           className="bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition"
         >
           + Create New Client
         </Link>
       </div>
+
+      <ClientNotificationBar
+        status={status}
+        name={name}
+        message={message}
+        action={action}
+      />
 
       <div className="bg-white shadow overflow-hidden sm:rounded-lg">
         {clients.length === 0 ? (

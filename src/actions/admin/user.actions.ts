@@ -40,7 +40,7 @@ export async function createUser(
   formData: FormData
 ): Promise<UserFormState> {
   try {
-    checkAuth();
+    await checkAuth();
 
     const name = formData.get("name") as string;
     const email = formData.get("email") as string;
@@ -108,7 +108,7 @@ export async function updateUser(
   formData: FormData
 ): Promise<ClientFormState> {
   try {
-    checkAuth();
+    await checkAuth();
 
     const userId = formData.get("id") as string;
     const name = formData.get("name") as string;
@@ -169,7 +169,7 @@ export async function updateUser(
 
 export async function deleteUser(userId: string): Promise<DeleteActionResult> {
   try {
-    checkAuth();
+    await checkAuth();
 
     if (!userId) {
       // If no ID, immediately redirect to error state
