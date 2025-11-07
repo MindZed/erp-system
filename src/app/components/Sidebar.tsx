@@ -5,12 +5,9 @@ import { UserRole } from '@prisma/client';
 
 const navItems = [
     { name: 'Dashboard', href: '/dashboard', requiredRole: null },
-    // We already built this feature
     { name: 'User Management', href: '/dashboard/admin/users', requiredRole: UserRole.ADMIN }, 
-    // Example placeholder links that require higher roles
-    { name: 'Client Management', href: '/dashboard/clients', requiredRole: null }, 
+    { name: 'Client Management', href: '/dashboard/clients', requiredRole: UserRole.MANAGER }, 
     { name: 'Project Management', href: '/dashboard/projects', requiredRole: UserRole.MANAGER },
-    { name: 'HR/Time Tracking', href: '/dashboard/hr', requiredRole: UserRole.MANAGER },
 ];
 
 interface SidebarProps {
@@ -19,15 +16,10 @@ interface SidebarProps {
 
 // Function to check if a link should be visible to the user's role
 const isLinkVisible = (linkRole: UserRole | null, userRole: UserRole): boolean => {
-    if (!linkRole) return true; // Always show if no role is required
-    
-    // Simple hierarchy: EMPLOYEE < MANAGER < ADMIN
-    const roleOrder = [UserRole.EMPLOYEE, UserRole.MANAGER, UserRole.ADMIN];
-    
+    if (!linkRole) return true;
+    const roleOrder = [UserRole.EMPLOYEE, UserRole.MANAGER, UserRole.ADMIN]; 
     const requiredIndex = roleOrder.indexOf(linkRole);
     const userIndex = roleOrder.indexOf(userRole);
-    
-    // User role must be equal to or higher than the required role
     return userIndex >= requiredIndex;
 };
 
