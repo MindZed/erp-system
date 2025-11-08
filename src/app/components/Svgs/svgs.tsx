@@ -142,3 +142,25 @@ export function FluentPerson16Filled(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function AkarIconsEdit(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" {...props}>
+      <path
+        fill="currentColor"
+        d="M20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0L3 17.25V21h3.75L20.71 7.04zM5.92 19H5v-.92l10.06-10.06.92.92L5.92 19z"
+      />
+    </svg>
+  );
+}
+
+export function BasilAdd(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" {...props}>
+      <path
+        fill="currentColor"
+        d="M12 5a1 1 0 0 1 1 1v5h5a1 1 0 1 1 0 2h-5v5a1 1 0 1 1-2 0v-5H6a1 1 0 1 1 0-2h5V6a1 1 0 0 1 1-1z"
+      />
+    </svg>
+  );
+}

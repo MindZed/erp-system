@@ -1,4 +1,4 @@
-// prisma/schema.prisma
+// mindzed/erp-system/erp-system-02abb7b4465004ac728e062c9a31c5e4ef5ac40a/prisma/schema.prisma
 
 // --- CONFIGURATION ---
 
@@ -32,6 +32,12 @@ model User {
   // Auth Relations (required by adapter)
   accounts Account[]
   sessions Session[]
+  
+  // New: Project/Task Relations
+  managedProjects Project[] @relation("ManagedProjects")
+  createdProjects Project[] @relation("CreatedProjects")
+  assignedTasks   Task[]    @relation("AssignedTasks")
+  createdTasks    Task[]    @relation("CreatedTasks")
 }
 
 enum UserRole {
@@ -40,15 +46,19 @@ enum UserRole {
   EMPLOYEE
 }
 
+// --- CLIENT MODEL ---
 model Client {
   id        String    @id @default(cuid())
   name      String    @unique 
-  contactEmail String? 
+  contactEmail String?
   phone     String?
   status    ClientStatus @default(ACTIVE)
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  // New: Project Relations
+  projects  Project[]
 }
 
 enum ClientStatus {
@@ -57,6 +67,101 @@ enum ClientStatus {
   INACTIVE
 }
 // --- END CLIENT MODEL ---
+
+// ----------------------------------------------------
+// 2. PROJECT AND TASK MANAGEMENT MODELS (New Section)
+// ----------------------------------------------------
+
+model Project {
+  id          String         @id @default(cuid())
+  name        String         @unique
+  description String?
+  
+  // New Fields based on requirements (Progress, Status Reason, Priority)
+  progress    Int            @default(0) // Percentage 0-100
+  status      ProjectStatus  @default(PENDING)
+  statusReason String?        @map("status_reason")
+  priority    Priority       @default(MEDIUM) 
+  
+  // Dates
+  startDate   DateTime?      @map("start_date") @db.Date
+  endDate     DateTime?      @map("end_date") @db.Date
+
+  // Relations
+  clientId    String
+  client      Client         @relation(fields: [clientId], references: [id])
+
+  managerId   String
+  manager     User           @relation("ManagedProjects", fields: [managerId], references: [id])
+  
+  // Created By (Required for all Projects)
+  createdById String         @map("created_by_id")
+  createdBy   User           @relation("CreatedProjects", fields: [createdById], references: [id])
+
+  tasks       Task[]
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@map("Project")
+  @@index([createdById]) // Index for createdBy to facilitate lookups
+}
+
+// Statuses based on your explicit list (plus PENDING as a start state)
+enum ProjectStatus {
+  PENDING
+  COMPLETED
+  ACTIVE
+  ON_HOLD
+  DELAYED
+  CANCELLED
+}
+
+enum Priority { // New Enum for Priority
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  
+  // Status and Reason
+  status      TaskStatus @default(PENDING)
+  statusReason String?    @map("status_reason")
+  
+  // Dates
+  startDate   DateTime?  @map("start_date") @db.Date
+  endDate     DateTime?  @map("end_date") @db.Date
+  
+  // Relations
+  projectId   String
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  assignedToId String?     @map("assigned_to_id")
+  assignedTo   User?       @relation("AssignedTasks", fields: [assignedToId], references: [id])
+  
+  // Created By (Optional for Tasks, as creation might be complex)
+  createdById  String?     @map("created_by_id")
+  createdBy    User?       @relation("CreatedTasks", fields: [createdById], references: [id])
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("Task")
+  @@index([assignedToId])
+  @@index([createdById])
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+}
 
 // --- NextAuth Required Adapter Models (No changes) ---
 model Account {

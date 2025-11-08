@@ -35,6 +35,12 @@ const navItems = [
     requiredRole: UserRole.MANAGER,
     icon: <RiBuilding2Fill className="h-7 py-1.5 pr-2" />,
   },
+  {
+    name: "Projects",
+    href: "/dashboard/projects",
+    requiredRole: UserRole.EMPLOYEE, // visible to all roles (Employee and above)
+    icon: <RiBuilding2Fill className="h-7 py-1.5 pr-2" />,
+  }
 ];
 
 const isLinkVisible = (
