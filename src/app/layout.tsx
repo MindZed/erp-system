@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import AuthProvider from "./components/AuthProvider";
 import localFont from "next/font/local";
+import { Toaster } from "react-hot-toast"; // ✅ added
 
 const clashDisplay = localFont({
   src: "../fonts/ClashDisplay-Variable.ttf",
@@ -27,6 +28,25 @@ export default function RootLayout({
         <AuthProvider>
           <div className="min-h-screen">{children}</div>
         </AuthProvider>
+
+        {/* ✅ Toast notifications */}
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: "#18181b",
+              color: "#f4f4f5",
+              borderRadius: "8px",
+              fontSize: "0.9rem",
+            },
+            success: {
+              iconTheme: { primary: "#22c55e", secondary: "#18181b" },
+            },
+            error: {
+              iconTheme: { primary: "#ef4444", secondary: "#18181b" },
+            },
+          }}
+        />
       </body>
     </html>
   );
