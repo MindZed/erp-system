@@ -2,10 +2,7 @@
 
 import prisma from '@/lib/prisma';
 import Link from 'next/link';
-import { auth } from '@/auth';
-import { redirect } from 'next/navigation';
-import { UserRole } from '@prisma/client';
-import DeleteUserButton from './components/DeleteUserButton'; 
+import DeleteTargetButton from '../../../components/crud/DeleteTargetButton';
 // FIX: Corrected import path to the shared components folder
 import ClientNotificationBar from '../../../components/ClientNotificationBar'; 
 
@@ -20,10 +17,6 @@ interface UsersListPageProps {
 }
 
 export default async function UsersListPage(props: UsersListPageProps) {
-  const session = await auth();
-  if (!session || !session.user || (session.user as any).role !== UserRole.ADMIN) {
-    redirect('/dashboard'); 
-  }
 
   // Use Promise.resolve and await to satisfy the strict Next.js compiler check
   const { status, name, message, action } = await Promise.resolve(props.searchParams);
@@ -96,9 +89,10 @@ export default async function UsersListPage(props: UsersListPageProps) {
                       
                       <span className="text-gray-400">|</span>
                       
-                      <DeleteUserButton 
-                        userId={user.id} 
+                      <DeleteTargetButton 
+                        targetId={user.id} 
                         className="p-1 border border-red-200 rounded-md hover:bg-red-50 text-xs"
+                        target='user'
                       />
                     </div>
                   </td>

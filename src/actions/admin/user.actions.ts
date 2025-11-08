@@ -6,7 +6,9 @@ import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { UserRole } from '@prisma/client';
 import { redirect } from 'next/navigation';
+import { auth } from "@/auth";
 
+// --- Types ---
 interface UserFormState {
   message: string;
   isSuccess: boolean;
@@ -17,18 +19,51 @@ interface DeleteActionResult {
   message: string;
 }
 
+// --- RBAC CHECK (Friend's Logic) ---
+// Throws an error if the user is not authenticated or not an ADMIN.
+const checkAuth = async () => {
+  const session = await auth();
+  const role = (session?.user as any)?.role;
+  const allowedAuth = [UserRole.ADMIN];
+
+  if (!session || !session.user || !allowedAuth.includes(role)) {
+    throw new Error("Not Authorized: Access Denied");
+  }
+  return session.user;
+};
+// --- End RBAC Check ---
+
+
 // ====================================================
 // 1. CREATE USER
 // ====================================================
 
-export async function createUser(prevState: UserFormState, formData: FormData): Promise<UserFormState> {
-  const name = formData.get('name') as string;
-  const email = formData.get('email') as string;
-  const password = formData.get('password') as string;
-  const role = formData.get('role') as UserRole;
+export async function createUser(
+  prevState: UserFormState,
+  formData: FormData
+): Promise<UserFormState> {
+  // 1. Check permissions immediately
+  try {
+    await checkAuth();
+  } catch (error) {
+    return { message: "Error: You are not authorized to create users.", isSuccess: false };
+  }
+
+  const name = formData.get("name") as string;
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
+  const role = formData.get("role") as UserRole;
 
   if (!email || !password || !name || !role) {
-    return { message: 'Error: All fields are required.', isSuccess: false };
+    return { message: "Error: All fields are required.", isSuccess: false };
+  }
+
+  if (
+    typeof email !== "string" ||
+    typeof password !== "string" ||
+    typeof name !== "string"
+  ) {
+    return { message: "Error: Invalid field format.", isSuccess: false };
   }
 
   try {
@@ -43,20 +78,33 @@ export async function createUser(prevState: UserFormState, formData: FormData): 
       },
     });
 
-    redirect(`/dashboard/admin/users?status=success&name=${encodeURIComponent(name.trim())}&action=created`);
-    return { message: 'User created successfully.', isSuccess: true }; // ✅ Stop further execution
+    // Success flow (returns message/state to the form)
+    return {
+      message: `Success: New user '${name.trim()}' created successfully.`,
+      isSuccess: true,
+    };
+  } catch (error) {
+    console.error("CREATE_USER_ERROR", error);
 
-  } catch (error: any) {
-    console.error('CREATE_USER_ERROR', error);
-
-    if (error.message?.includes('NEXT_REDIRECT')) throw error;
-    if (error.code === 'P2002') {
-      redirect(`/dashboard/admin/users?status=error&message=${encodeURIComponent('User already exists.')}`);
-      return { message: 'Duplicate user email.', isSuccess: false };
+    if ((error as Error).message.includes("NEXT_REDIRECT")) {
+      throw error;
+    }
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "P2002"
+    ) {
+      return {
+        message: "Error: A user with this email already exists.",
+        isSuccess: false,
+      };
     }
 
-    redirect(`/dashboard/admin/users?status=error&message=${encodeURIComponent('Failed to create user.')}`);
-    return { message: 'Unexpected error.', isSuccess: false };
+    return {
+      message: "Failed to create user due to an unexpected error.",
+      isSuccess: false,
+    };
   }
 }
 
@@ -64,14 +112,24 @@ export async function createUser(prevState: UserFormState, formData: FormData): 
 // 2. UPDATE USER
 // ====================================================
 
-export async function updateUser(prevState: UserFormState, formData: FormData): Promise<UserFormState> {
-  const userId = formData.get('id') as string;
-  const name = formData.get('name') as string;
-  const email = formData.get('email') as string;
-  const role = formData.get('role') as UserRole;
+export async function updateUser(
+  prevState: UserFormState,
+  formData: FormData
+): Promise<UserFormState> {
+  // 1. Check permissions immediately
+  try {
+    await checkAuth();
+  } catch (error) {
+    throw new Error("Not Authorized: Access Denied");
+  }
+
+  const userId = formData.get("id") as string;
+  const name = formData.get("name") as string;
+  const email = formData.get("email") as string;
+  const role = formData.get("role") as UserRole;
 
   if (!userId || !email || !name || !role) {
-    return { message: 'Error: Missing required fields for update.', isSuccess: false };
+    return { message: "Error: Missing required fields for update.", isSuccess: false };
   }
 
   try {
@@ -80,20 +138,38 @@ export async function updateUser(prevState: UserFormState, formData: FormData): 
       data: { name: name.trim(), email: email.trim(), role },
     });
 
-    redirect(`/dashboard/admin/users?status=success&name=${encodeURIComponent(name.trim())}&action=updated`);
-    return { message: 'User updated successfully.', isSuccess: true }; // ✅ Stops execution
+    // Success flow (redirects with status flag)
+    redirect(
+      `/dashboard/admin/users?status=success&name=${encodeURIComponent(
+        name.trim()
+      )}&action=updated`
+    );
+  } catch (error) {
+    console.error("UPDATE_USER_ERROR", error);
 
-  } catch (error: any) {
-    console.error('UPDATE_USER_ERROR', error);
-
-    if (error.message?.includes('NEXT_REDIRECT')) throw error;
-    if (error.code === 'P2002') {
-      redirect(`/dashboard/admin/users?status=error&message=${encodeURIComponent('User already exists.')}`);
-      return { message: 'Duplicate email.', isSuccess: false };
+    // Check for NEXT_REDIRECT signal and re-throw it.
+    if ((error as Error).message.includes("NEXT_REDIRECT")) {
+      throw error;
     }
 
-    redirect(`/dashboard/admin/users?status=error&message=${encodeURIComponent('Update failed.')}`);
-    return { message: 'Update failed.', isSuccess: false };
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "P2002"
+    ) {
+      redirect(
+        `/dashboard/admin/users?status=error&message=${encodeURIComponent(
+          "User already exists."
+        )}`
+      );
+    }
+
+    redirect(
+      `/dashboard/admin/users?status=error&message=${encodeURIComponent(
+        "Update failed."
+      )}`
+    );
   }
 }
 
@@ -102,28 +178,52 @@ export async function updateUser(prevState: UserFormState, formData: FormData): 
 // ====================================================
 
 export async function deleteUser(userId: string): Promise<DeleteActionResult> {
+  // 1. Check permissions immediately
+  try {
+    await checkAuth();
+  } catch (error) {
+    return { success: false, message: "Not Authorized: Access Denied" };
+  }
+
   if (!userId) {
-    redirect(`/dashboard/admin/users?status=error&message=${encodeURIComponent('Missing User ID for deletion.')}`);
-    return { success: false, message: 'Missing User ID.' };
+    // If no ID, immediately redirect to error state
+    redirect(
+      `/dashboard/admin/users?status=error&message=${encodeURIComponent(
+        "Missing User ID for deletion."
+      )}`
+    );
   }
 
   try {
+    // Fetch user name BEFORE deletion (for the success message)
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { name: true },
     });
-    const userName = user?.name || 'User';
+    const userName = user?.name || "User";
 
-    await prisma.user.delete({ where: { id: userId } });
+    await prisma.user.delete({
+      where: { id: userId },
+    });
 
-    redirect(`/dashboard/admin/users?status=success&name=${encodeURIComponent(userName)}&action=deleted`);
-    return { success: true, message: 'User deleted successfully.' }; // ✅ Stop further redirects
+    // SUCCESS: Throw redirect signal on success
+    redirect(
+      `/dashboard/admin/users?status=success&name=${encodeURIComponent(
+        userName
+      )}&action=deleted`
+    );
+  } catch (error) {
+    // Check for Next.js redirect error and re-throw it.
+    if ((error as Error).message.includes("NEXT_REDIRECT")) {
+      throw error;
+    }
 
-  } catch (error: any) {
-    if (error.message?.includes('NEXT_REDIRECT')) throw error;
-
-    console.error('DELETE_USER_ERROR', error);
-    redirect(`/dashboard/admin/users?status=error&message=${encodeURIComponent('Failed to delete user.')}`);
-    return { success: false, message: 'Failed to delete user.' };
+    console.error("DELETE_USER_ERROR", error);
+    // FAILURE: Redirect to error state
+    redirect(
+      `/dashboard/admin/users?status=error&message=${encodeURIComponent(
+        "Failed to delete user. Check for active sessions or related records."
+      )}`
+    );
   }
 }

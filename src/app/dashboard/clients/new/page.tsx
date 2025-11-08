@@ -2,12 +2,13 @@
 
 "use client";
 
-import { useActionState } from 'react';
-import { createClient } from '@/actions/client.actions'; 
-import Link from 'next/link';
+import { useActionState } from "react";
+import { createClient } from "@/actions/client.actions";
+import { ClientStatus } from "@prisma/client";
+import Link from "next/link";
 
 const initialState = {
-  message: '',
+  message: "",
 };
 
 export default function NewClientPage() {
@@ -17,25 +18,38 @@ export default function NewClientPage() {
     <div className="p-8 text-gray-900">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Add New Client</h1>
-        <Link 
-          href="/dashboard/clients" 
+        <Link
+          href="/dashboard/clients"
           className="text-blue-600 hover:underline"
         >
-            ← Back to List
+          ← Back to List
         </Link>
       </div>
 
       {state.message && (
-        <p className={`mb-4 p-3 rounded ${state.message.startsWith('Error') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+        <p
+          className={`mb-4 p-3 rounded ${
+            state.message.startsWith("Error")
+              ? "bg-red-100 text-red-700"
+              : "bg-green-100 text-green-700"
+          }`}
+        >
           {state.message}
         </p>
       )}
 
-      <form action={dispatch} className="space-y-4 max-w-lg bg-white p-6 rounded-lg shadow">
-        
+      <form
+        action={dispatch}
+        className="space-y-4 max-w-lg bg-white p-6 rounded-lg shadow"
+      >
         {/* Name Field */}
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">Client Name (Company)</label>
+          <label
+            htmlFor="name"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Client Name (Company)
+          </label>
           <input
             type="text"
             id="name"
@@ -47,13 +61,57 @@ export default function NewClientPage() {
 
         {/* Contact Email Field */}
         <div>
-          <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700">Contact Email</label>
+          <label
+            htmlFor="contactEmail"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Contact Email
+          </label>
           <input
             type="email"
             id="contactEmail"
             name="contactEmail"
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900"
           />
+        </div>
+
+        {/* Contact Number Field */}
+        <div>
+          <label
+            htmlFor="phone"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Phone No.
+          </label>
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900"
+          />
+        </div>
+
+        {/* status */}
+        <div>
+          <label
+            htmlFor="phone"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Status
+          </label>
+          <select
+            id="Status"
+            name="status"
+            required
+            defaultValue={ClientStatus.ACTIVE}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900"
+          >
+          {Object.values(ClientStatus).map((status) => (
+            <option key={status} value={status}>
+              {status.charAt(0) + status.slice(1).toLowerCase()}
+            </option>
+          ))}
+          </ select>
         </div>
 
         <button
