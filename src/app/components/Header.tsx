@@ -13,6 +13,8 @@ import {
   RiBuilding2Fill,
 } from "./Svgs/svgs";
 import DropdownButton from "./dropdown";
+import { useState } from "react";
+import ChangePasswordModal from "@/app/components/ChangePasswordModal";
 
 const navItems = [
   {
@@ -53,6 +55,7 @@ interface HeaderProps {
 
 export default function Header({ userName, userRole }: HeaderProps) {
   const pathname = usePathname();
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const uR = userRole.toLowerCase();
   return (
     <nav className="grid grid-cols-3 items-center py-4 px-6 bg-zBlack text-zGrey-3 shadow-sm sticky top-0 z-10">
@@ -81,9 +84,8 @@ export default function Header({ userName, userRole }: HeaderProps) {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`border-2 rounded-3xl px-3 flex items-center transition-colors bg-zGrey-1 ${
-                  isActive ? "text-primaryRed" : "hover:bg-zGrey-2"
-                }`}
+                className={`border-2 rounded-3xl px-3 flex items-center transition-colors bg-zGrey-1 ${isActive ? "text-primaryRed" : "hover:bg-zGrey-2"
+                  }`}
               >
                 <div className="flex items-center text-sm ">
                   {item.icon}
@@ -103,17 +105,33 @@ export default function Header({ userName, userRole }: HeaderProps) {
       </div> */}
       <div className="justify-self-end">
         <DropdownButton
-          label={uR}
-          buttonClassName="capitalize"
+          label={
+            <div
+              className="flex flex-col items-start leading-tight">
+              <span className="font-semibold text-zGrey-3">{userName}</span>
+              <span className="text-xs text-primaryRed font-semibold capitalize tracking-wide">
+                {userRole.toLowerCase()}
+              </span>
+            </div>
+          }
           reactCompo={[
-            <div key={1} className="flex justify-end pr-4">
-              Setting
-            </div>,
-            <SignOutButton key={9} />,
+            <button
+              key="change-password"
+              onClick={() => setShowPasswordModal(true)}
+              className="w-full text-left px-4 py-2 text-zGrey-3 hover:bg-zGrey-2 rounded-md transition-colors duration-150"
+            >
+              Change Password
+            </button>
+            ,
+            <SignOutButton key="signout" />
           ]}
-          alignContent="left"
+          alignContent="right"
           labelSvg={<FluentPerson16Filled className="h-7 py-1 pr-2" />}
         />
+
+        {showPasswordModal && (
+          <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />
+        )}
       </div>
     </nav>
   );

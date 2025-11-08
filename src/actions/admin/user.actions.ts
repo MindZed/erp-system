@@ -2,17 +2,16 @@
 
 "use server";
 
-import prisma from "@/lib/prisma";
-import bcrypt from "bcryptjs";
-import { UserRole } from "@prisma/client";
-import { redirect } from "next/navigation";
+import prisma from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
+import { UserRole } from '@prisma/client';
+import { redirect } from 'next/navigation';
 import { auth } from "@/auth";
+
+// --- Types ---
 interface UserFormState {
   message: string;
   isSuccess: boolean;
-}
-interface ClientFormState {
-  message: string;
 }
 
 interface DeleteActionResult {
@@ -20,6 +19,8 @@ interface DeleteActionResult {
   message: string;
 }
 
+// --- RBAC CHECK (Friend's Logic) ---
+// Throws an error if the user is not authenticated or not an ADMIN.
 const checkAuth = async () => {
   const session = await auth();
   const role = (session?.user as any)?.role;
@@ -30,46 +31,54 @@ const checkAuth = async () => {
   }
   return session.user;
 };
+// --- End RBAC Check ---
+
 
 // ====================================================
-// 1. CREATE USER (REMAINS THE SAME)
+// 1. CREATE USER
 // ====================================================
 
 export async function createUser(
   prevState: UserFormState,
   formData: FormData
 ): Promise<UserFormState> {
+  // 1. Check permissions immediately
   try {
     await checkAuth();
+  } catch (error) {
+    return { message: "Error: You are not authorized to create users.", isSuccess: false };
+  }
 
-    const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
-    const role = formData.get("role") as UserRole;
+  const name = formData.get("name") as string;
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
+  const role = formData.get("role") as UserRole;
 
-    if (!email || !password || !name || !role) {
-      return { message: "Error: All fields are required.", isSuccess: false };
-    }
+  if (!email || !password || !name || !role) {
+    return { message: "Error: All fields are required.", isSuccess: false };
+  }
 
-    if (
-      typeof email !== "string" ||
-      typeof password !== "string" ||
-      typeof name !== "string"
-    ) {
-      return { message: "Error: Invalid field format.", isSuccess: false };
-    }
+  if (
+    typeof email !== "string" ||
+    typeof password !== "string" ||
+    typeof name !== "string"
+  ) {
+    return { message: "Error: Invalid field format.", isSuccess: false };
+  }
 
+  try {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     await prisma.user.create({
       data: {
         email: email.trim(),
         name: name.trim(),
-        hashedPassword: hashedPassword,
-        role: role,
+        hashedPassword,
+        role,
       },
     });
 
+    // Success flow (returns message/state to the form)
     return {
       message: `Success: New user '${name.trim()}' created successfully.`,
       isSuccess: true,
@@ -100,35 +109,36 @@ export async function createUser(
 }
 
 // ====================================================
-// 2. UPDATE USER (REMAINS THE SAME)
+// 2. UPDATE USER
 // ====================================================
 
 export async function updateUser(
-  prevState: ClientFormState,
+  prevState: UserFormState,
   formData: FormData
-): Promise<ClientFormState> {
+): Promise<UserFormState> {
+  // 1. Check permissions immediately
   try {
     await checkAuth();
+  } catch (error) {
+    throw new Error("Not Authorized: Access Denied");
+  }
 
-    const userId = formData.get("id") as string;
-    const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
-    const role = formData.get("role") as UserRole;
+  const userId = formData.get("id") as string;
+  const name = formData.get("name") as string;
+  const email = formData.get("email") as string;
+  const role = formData.get("role") as UserRole;
 
-    if (!userId || !email || !name || !role) {
-      return { message: "Error: Missing required fields for update." };
-    }
+  if (!userId || !email || !name || !role) {
+    return { message: "Error: Missing required fields for update.", isSuccess: false };
+  }
 
+  try {
     await prisma.user.update({
       where: { id: userId },
-      data: {
-        name: name.trim(),
-        email: email.trim(),
-        role: role,
-      },
+      data: { name: name.trim(), email: email.trim(), role },
     });
 
-    // Success! Redirect with query parameters.
+    // Success flow (redirects with status flag)
     redirect(
       `/dashboard/admin/users?status=success&name=${encodeURIComponent(
         name.trim()
@@ -164,23 +174,28 @@ export async function updateUser(
 }
 
 // ====================================================
-// 3. DELETE USER (THE FIX)
+// 3. DELETE USER
 // ====================================================
 
 export async function deleteUser(userId: string): Promise<DeleteActionResult> {
+  // 1. Check permissions immediately
   try {
     await checkAuth();
+  } catch (error) {
+    return { success: false, message: "Not Authorized: Access Denied" };
+  }
 
-    if (!userId) {
-      // If no ID, immediately redirect to error state
-      redirect(
-        `/dashboard/admin/users?status=error&message=${encodeURIComponent(
-          "Missing User ID for deletion."
-        )}`
-      );
-    }
+  if (!userId) {
+    // If no ID, immediately redirect to error state
+    redirect(
+      `/dashboard/admin/users?status=error&message=${encodeURIComponent(
+        "Missing User ID for deletion."
+      )}`
+    );
+  }
 
-    // 1. Fetch user name BEFORE deletion (for the success message)
+  try {
+    // Fetch user name BEFORE deletion (for the success message)
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { name: true },
@@ -191,21 +206,20 @@ export async function deleteUser(userId: string): Promise<DeleteActionResult> {
       where: { id: userId },
     });
 
-    // 2. SUCCESS: Throw redirect signal on success
-    // This is required to pass the success message via URL
+    // SUCCESS: Throw redirect signal on success
     redirect(
       `/dashboard/admin/users?status=success&name=${encodeURIComponent(
         userName
       )}&action=deleted`
     );
   } catch (error) {
-    // 3. Check for Next.js redirect error and re-throw it.
+    // Check for Next.js redirect error and re-throw it.
     if ((error as Error).message.includes("NEXT_REDIRECT")) {
       throw error;
     }
 
     console.error("DELETE_USER_ERROR", error);
-    // 4. FAILURE: Redirect to error state
+    // FAILURE: Redirect to error state
     redirect(
       `/dashboard/admin/users?status=error&message=${encodeURIComponent(
         "Failed to delete user. Check for active sessions or related records."

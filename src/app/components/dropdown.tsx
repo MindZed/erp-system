@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Down, Up } from "./Svgs/svgs";
 
 type Props = {
-  label: string;
+  label: string | React.ReactNode;
   labelSvg?: React.ReactNode;
   reactCompo: React.ReactNode;
   /** alignment of dropdown panel relative to button */
@@ -39,6 +39,7 @@ export default function DropdownButton({
     function handleDocumentClick(e: MouseEvent) {
       if (!wrapperRef.current) return;
       if (wrapperRef.current.contains(e.target as Node)) return; // clicked inside
+      if (document.querySelector(".modal-open")) return; // modal is open, ignore
       setOpen(false);
     }
     function handleEsc(e: KeyboardEvent) {
@@ -74,9 +75,8 @@ export default function DropdownButton({
           e.preventDefault(); // avoid focus stealing weirdness
           setOpen((s) => !s); // toggle reliably even if clicking SVG
         }}
-        className={`flex items-center rounded-3xl px-3 transition outline-0 hover:bg-zGrey-2 ${
-          buttonClassName || "bg-zGrey-1 "
-        }`}
+        className={`flex items-center rounded-3xl px-3 transition outline-0 hover:bg-zGrey-2 ${buttonClassName || "bg-zGrey-1 "
+          }`}
       >
         {labelSvg}
         {label}
@@ -87,18 +87,20 @@ export default function DropdownButton({
         <div
           role="menu"
           tabIndex={-1}
-          className={`absolute z-50 mt-2 w-42 max-h-80 overflow-auto rounded-xl px-3 bg-zGrey-1 shadow-zGrey-3 outline-0 ${
-            align === "right" ? "right-0" : "left-0"
-          } ${panelClassName}`}
+          className={`absolute z-50 mt-2 w-42 max-h-80 overflow-auto rounded-xl px-3 bg-zGrey-1 shadow-zGrey-3 outline-0 ${align === "right" ? "right-0" : "left-0"
+            } ${panelClassName}`}
           onKeyDown={(e) => {
             // simple keyboard support: close on Enter when focused on the panel root
             if (e.key === "Enter") setOpen(false);
           }}
         >
           <div
-            className={`p-2 flex flex-col gap-2 ${
-              alignContent === "right" ? "justify-end" : "justify-start"
-            }`}
+            className={`p-2 flex flex-col gap-2 ${alignContent === "right" ? "justify-end" : "justify-start"
+              }`}
+            onClick={() => {
+              // ✅ close dropdown 1 second after any option click
+              setTimeout(() => setOpen(false), 1000);
+            }}
           >
             {reactCompo}
           </div>
