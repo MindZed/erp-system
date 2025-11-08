@@ -6,6 +6,7 @@ import { deleteUser } from "@/actions/admin/user.actions";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteClient } from "@/actions/client.actions";
+import { MdiDeleteOutline } from "../Svgs/svgs";
 
 interface DeleteUserButtonProps {
   targetId: string;
@@ -95,11 +96,13 @@ export default function DeleteTargetButton({
       <button
         onClick={() => setShowConfirm(true)}
         disabled={isDeleting}
-        className={`text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed ${
+        className={`text-red-500 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed ${
           className ?? ""
         } cursor-pointer`}
       >
-        {isDeleting ? "Deleting..." : "Delete"}
+        <MdiDeleteOutline className="h-6" />
+        
+        {isDeleting ? "Deleting..." : ``}
       </button>
       
       {showConfirm && (

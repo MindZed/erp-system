@@ -80,7 +80,7 @@ export default function DropdownButton({
       >
         {labelSvg}
         {label}
-        {open ? <Up className="h-5" /> : <Down className="h-5" />}
+        {open ? <Up className="h-5 ml-1" /> : <Down className="h-5 ml-1" />}
       </button>
 
       {open && (
@@ -95,7 +95,13 @@ export default function DropdownButton({
             if (e.key === "Enter") setOpen(false);
           }}
         >
-          <div className={`p-2 flex flex-col gap-2 ${alignContent === "right" ? "justify-end" : "justify-start"}`}>{reactCompo}</div>
+          <div
+            className={`p-2 flex flex-col gap-2 ${
+              alignContent === "right" ? "justify-end" : "justify-start"
+            }`}
+          >
+            {reactCompo}
+          </div>
         </div>
       )}
     </div>

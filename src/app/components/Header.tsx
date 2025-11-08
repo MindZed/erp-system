@@ -55,7 +55,7 @@ export default function Header({ userName, userRole }: HeaderProps) {
   const pathname = usePathname();
   const uR = userRole.toLowerCase();
   return (
-    <nav className="grid grid-cols-3 items-center py-4 px-6 border-b bg-zBlack text-zGrey-3 shadow-sm sticky top-0 z-10">
+    <nav className="grid grid-cols-3 items-center py-4 px-6 bg-zBlack text-zGrey-3 shadow-sm sticky top-0 z-10">
       <div className="flex">
         <div className="logo flex items-center">
           <div className="border-2 rounded-3xl px-3 mr-5">
@@ -85,7 +85,7 @@ export default function Header({ userName, userRole }: HeaderProps) {
                   isActive ? "text-primaryRed" : "hover:bg-zGrey-2"
                 }`}
               >
-                <div className="flex items-center text-sm">
+                <div className="flex items-center text-sm ">
                   {item.icon}
                   <span className="text-zGrey-3">{item.name}</span>
                 </div>
@@ -103,9 +103,15 @@ export default function Header({ userName, userRole }: HeaderProps) {
       </div> */}
       <div className="justify-self-end">
         <DropdownButton
-          label="Zywfo"
-          reactCompo={[<SignOutButton />, <SignOutButton/> ]}
-          alignContent="right"
+          label={uR}
+          buttonClassName="capitalize"
+          reactCompo={[
+            <div key={1} className="flex justify-end pr-4">
+              Setting
+            </div>,
+            <SignOutButton key={9} />,
+          ]}
+          alignContent="left"
           labelSvg={<FluentPerson16Filled className="h-7 py-1 pr-2" />}
         />
       </div>

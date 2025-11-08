@@ -1,98 +1,120 @@
 // src/app/dashboard/admin/users/page.tsx
 
-import prisma from '@/lib/prisma';
-import Link from 'next/link';
-import DeleteTargetButton from '../../../components/crud/DeleteTargetButton';
+import prisma from "@/lib/prisma";
+import Link from "next/link";
+import DeleteTargetButton from "../../../components/crud/DeleteTargetButton";
 // FIX: Corrected import path to the shared components folder
-import ClientNotificationBar from '../../../components/ClientNotificationBar'; 
+import ClientNotificationBar from "../../../components/ClientNotificationBar";
+import { AkarIconsEdit, BasilAdd } from "@/app/components/Svgs/svgs";
 
 // Define expected props including searchParams from the URL
 interface UsersListPageProps {
-    searchParams: {
-        status?: string;
-        name?: string;
-        message?: string;
-        action?: string; 
-    };
+  searchParams: {
+    status?: string;
+    name?: string;
+    message?: string;
+    action?: string;
+  };
 }
 
 export default async function UsersListPage(props: UsersListPageProps) {
-
   // Use Promise.resolve and await to satisfy the strict Next.js compiler check
-  const { status, name, message, action } = await Promise.resolve(props.searchParams);
-  
+  const { status, name, message, action } = await Promise.resolve(
+    props.searchParams
+  );
+
   // Fetch all system users directly on the server
   const users = await prisma.user.findMany({
-    orderBy: { createdAt: 'asc' },
+    orderBy: { createdAt: "asc" },
     select: {
       id: true,
       name: true,
       email: true,
       role: true,
       createdAt: true,
-    }
+    },
   });
 
   return (
-    <div className="p-8 text-gray-900">
+    <div className="px-8 text-white bg-zBlack">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">User Management ({users.length})</h1>
-        <Link 
-          href="/dashboard/admin/users/new" 
-          className="bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition"
+        <h1 className="text-3xl font-bold uppercase">User Action ({users.length})</h1>
+        <Link
+          href="/dashboard/admin/users/new"
+          className="bg-primaryRed text-xs text-white py-3 px-4 rounded-2xl hover:bg-primaryRed/80 transition flex items-center justify-center gap-2"
         >
-          + Create New User
+          <BasilAdd className="h-7" /> New Member
         </Link>
       </div>
 
       {/* Display the notification bar */}
-      <ClientNotificationBar status={status} name={name} message={message} action={action} />
+      <ClientNotificationBar
+        status={status}
+        name={name}
+        message={message}
+        action={action}
+      />
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+      <div className="bg-zGrey-1 shadow overflow-hidden sm:rounded-lg">
         {users.length === 0 ? (
-          <p className="p-4 text-center text-gray-500">No system users found.</p>
+          <p className="p-4 text-center text-white">No system users found.</p>
         ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-zGrey-2 ">
+            <thead className="bg-zGrey-2 text-white uppercase tracking-wider text-xs">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left font-medium ">Name</th>
+                <th className="px-6 py-3 text-left font-medium">Email</th>
+                <th className="px-6 py-3 text-left font-medium">Role</th>
+                <th className="px-6 py-3 text-left font-medium">Created</th>
+
+                <th className="px-6 py-3 text-center font-medium">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-zGrey-1 divide-y divide-zGrey-2">
               {users.map((user) => (
                 <tr key={user.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-normal ">
+                    {user.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-light">
+                    {user.email}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'ADMIN' ? 'bg-red-100 text-red-800' : user.role === 'MANAGER' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
+                    <span
+                      className={`px-2 inline-flex text-xs leading-5 font-medium rounded-full ${
+                        user.role === "ADMIN"
+                          ? "bg-red-100 text-red-800"
+                          : user.role === "MANAGER"
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                    >
                       {user.role}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(user.createdAt).toLocaleDateString()}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-normal ">
+                    {new Date(user.createdAt).toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })}
                   </td>
-                  
+
                   <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                     <div className="flex justify-center items-center space-x-2">
-                      
-                      <Link 
-                        href={`/dashboard/admin/users/${user.id}/edit`} 
-                        className="text-indigo-600 hover:bg-indigo-50 p-1 border border-indigo-200 rounded-md transition duration-100 text-xs"
+                      <Link
+                        href={`/dashboard/admin/users/${user.id}/edit`}
+                        className="p-1 bg-zGrey-2 rounded-md hover:bg-zGrey-3/50 text-active"
                       >
-                        Edit
+                        <AkarIconsEdit className="h-5" />
                       </Link>
-                      
+
                       <span className="text-gray-400">|</span>
-                      
-                      <DeleteTargetButton 
-                        targetId={user.id} 
-                        className="p-1 border border-red-200 rounded-md hover:bg-red-50 text-xs"
-                        target='user'
+
+                      <DeleteTargetButton
+                        targetId={user.id}
+                        className="p-1 bg-zGrey-2 rounded-md hover:bg-zGrey-3/50 text-xs "
+                        target="user"
                       />
                     </div>
                   </td>
