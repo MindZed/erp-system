@@ -112,15 +112,16 @@ export default function DeleteTargetButton({
         <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div
             ref={modalRef}
-            className="bg-white p-6 rounded-xl shadow-xl w-full max-w-lg text-gray-900"
+            className="bg-white p-6 sm:p-8 rounded-xl shadow-xl w-full max-w-lg text-gray-900 overflow-y-auto max-h-[90vh] flex flex-col"
           >
-            <h3 className="text-xl md:text-2xl font-extrabold text-red-600 mb-4 text-center">
+            <h3 className="text-xl sm:text-2xl font-extrabold text-red-600 mb-4 text-center leading-snug break-words whitespace-normal">
               CONFIRM PERMANENT DELETION
             </h3>
 
-            <p className="mb-6 text-sm text-center">
-              This action is <strong>IRREVERSIBLE</strong>. To confirm, please
-              type the word
+            <p className="mb-6 text-sm sm:text-base text-center leading-normal break-words whitespace-normal">
+              This action is <strong>IRREVERSIBLE</strong>.
+              <br className="hidden sm:block" />
+              To confirm, please type the word
               <strong className="text-red-600"> 'CONFIRM' </strong> below.
             </p>
 
@@ -129,31 +130,28 @@ export default function DeleteTargetButton({
               type="text"
               value={confirmationText}
               onChange={(e) => setConfirmationText(e.target.value)}
-              className="w-40 p-2 mb-4 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300 text-center"
+              className="w-48 p-2 mb-6 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300 text-center mx-auto text-sm sm:text-base"
               placeholder="Type CONFIRM"
               disabled={isDeleting}
             />
 
-            <div className="flex justify-end gap-3 flex-wrap">
+            <div className="flex justify-end sm:justify-center gap-3 flex-wrap mt-auto">
               <button
                 onClick={closeModal}
                 disabled={isDeleting}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition text-sm sm:text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmDelete}
-                disabled={
-                  isDeleting || normalizedConfirmation() !== "CONFIRM"
-                }
-                className={`px-4 py-2 rounded-lg text-white transition ${
-                  isDeleting || normalizedConfirmation() !== "CONFIRM"
-                    ? "bg-red-400/70 cursor-not-allowed"
-                    : "bg-red-600 hover:bg-red-700"
-                }`}
+                disabled={isDeleting || normalizedConfirmation() !== 'CONFIRM'}
+                className={`px-4 py-2 rounded-lg text-white text-sm sm:text-base transition ${isDeleting || normalizedConfirmation() !== 'CONFIRM'
+                    ? 'bg-red-400/70 cursor-not-allowed'
+                    : 'bg-red-600 hover:bg-red-700'
+                  }`}
               >
-                {isDeleting ? "Processing..." : "Delete Permanently"}
+                {isDeleting ? 'Processing...' : 'Delete Permanently'}
               </button>
             </div>
           </div>
