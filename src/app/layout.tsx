@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import AuthProvider from "./components/AuthProvider";
 import localFont from "next/font/local";
-import { Toaster } from "react-hot-toast"; // ✅ added
+import { Toaster } from "react-hot-toast";
 
 const clashDisplay = localFont({
   src: "../fonts/ClashDisplay-Variable.ttf",
@@ -31,7 +31,7 @@ export default function RootLayout({
 
         {/* ✅ Toast notifications */}
         <Toaster
-          position="top-right"
+          position="bottom-left"
           toastOptions={{
             style: {
               background: "#18181b",

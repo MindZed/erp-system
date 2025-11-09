@@ -27,19 +27,19 @@ const navItems = [
     name: "User Action",
     href: "/dashboard/admin/users",
     requiredRole: UserRole.ADMIN,
-    icon: <Fa7SolidHandBackFist className="h-7 py-1.5 pr-2" />,
+    icon: <Fa7SolidHandBackFist className="h-7 py-1 pr-2" />,
   },
   {
     name: "Client Action",
     href: "/dashboard/clients",
     requiredRole: UserRole.MANAGER,
-    icon: <RiBuilding2Fill className="h-7 py-1.5 pr-2" />,
+    icon: <RiBuilding2Fill className="h-7 py-1 pr-2" />,
   },
   {
     name: "Projects",
     href: "/dashboard/projects",
     requiredRole: UserRole.EMPLOYEE, // visible to all roles (Employee and above)
-    icon: <RiBuilding2Fill className="h-7 py-1.5 pr-2" />,
+    icon: <RiBuilding2Fill className="h-7 py-1 pr-2" />,
   }
 ];
 
@@ -62,9 +62,10 @@ interface HeaderProps {
 export default function Header({ userName, userRole }: HeaderProps) {
   const pathname = usePathname();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [menuToggle, setMenuToggle] = useState(false);
   const uR = userRole.toLowerCase();
   return (
-    <nav className="grid grid-cols-3 items-center py-4 px-6 bg-zBlack text-zGrey-3 shadow-sm sticky top-0 z-10">
+    <nav className="grid grid-cols-4 items-center py-4 px-6 bg-zBlack text-zGrey-3 shadow-sm sticky top-0 z-10">
       <div className="flex">
         <div className="logo flex items-center">
           <div className="border-2 rounded-3xl px-3 mr-5">
@@ -81,7 +82,7 @@ export default function Header({ userName, userRole }: HeaderProps) {
         </h2>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 justify-center col-span-2 col-start-2">
         {navItems.map((item) => {
           // RBAC CHECK
           const isActive = pathname === item.href;
@@ -90,12 +91,13 @@ export default function Header({ userName, userRole }: HeaderProps) {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`border-2 rounded-3xl px-3 flex items-center transition-colors bg-zGrey-1 ${isActive ? "text-primaryRed" : "hover:bg-zGrey-2"
-                  }`}
+                className={`border-2 rounded-3xl px-3 flex items-center transition-colors bg-zGrey-1 ${
+                  isActive ? "text-primaryRed" : "hover:bg-zGrey-2"
+                }`}
               >
                 <div className="flex items-center text-sm ">
                   {item.icon}
-                  <span className="text-zGrey-3">{item.name}</span>
+                  <span className="text-zGrey-3 block">{item.name}</span>
                 </div>
               </Link>
             );
@@ -112,11 +114,10 @@ export default function Header({ userName, userRole }: HeaderProps) {
       <div className="justify-self-end">
         <DropdownButton
           label={
-            <div
-              className="flex flex-col items-start leading-tight">
-              <span className="font-semibold text-zGrey-3">{userName}</span>
-              <span className="text-xs text-primaryRed font-semibold capitalize tracking-wide">
-                {userRole.toLowerCase()}
+            <div className="flex items-end justify-center leading-tight">
+              <span className="font-medium text-zGrey-3">{userName}</span>
+              <span className="text-xs ml-0.5 text-primaryRed capitalize tracking-wide">
+                {uR}
               </span>
             </div>
           }
@@ -124,12 +125,11 @@ export default function Header({ userName, userRole }: HeaderProps) {
             <button
               key="change-password"
               onClick={() => setShowPasswordModal(true)}
-              className="w-full text-left px-4 py-2 text-zGrey-3 hover:bg-zGrey-2 rounded-md transition-colors duration-150"
+              className="w-full text-left leading-none text-sm px-4 py-2 text-zGrey-3 hover:bg-zGrey-2 rounded-md transition-colors duration-150"
             >
               Change Password
-            </button>
-            ,
-            <SignOutButton key="signout" />
+            </button>,
+            <SignOutButton key="signout" />,
           ]}
           alignContent="right"
           labelSvg={<FluentPerson16Filled className="h-7 py-1 pr-2" />}

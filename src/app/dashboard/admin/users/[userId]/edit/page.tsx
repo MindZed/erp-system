@@ -51,9 +51,9 @@ export default async function EditUserPage(props: EditUserPageProps) {
 
   // 4. Pass fetched data to the Client Component form
   return (
-    <div className="p-8 text-gray-900">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Edit User: {user.name}</h1>
+    <div className="p-8 flex flex-col justify-center items-center">
+      <div className="flex justify-between items-center mb-6 w-full">
+        <h1 className="text-2xl font-bold">EDIT USER: {user.name}</h1>
         <Link href="/dashboard/admin/users" className="text-blue-600 hover:underline">
             ← Back to User List
         </Link>

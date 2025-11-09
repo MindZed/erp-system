@@ -22,7 +22,7 @@ export default async function DashboardLayout({
 
   // 2. Dashboard Structure
   return (
-    <div className="flex min-h-screen bg-gray-50 text-gray-900">
+    <div className="flex min-h-screen text-white">
       
       {/* 4. Main Content Area */}
       <div className="flex flex-col flex-1">

@@ -43,7 +43,7 @@ export default function EditUserForm({ initialUser }: EditUserFormProps) {
   return (
     <form
       action={dispatch}
-      className="space-y-4 max-w-lg bg-white p-6 rounded-lg shadow"
+      className="space-y-4 max-w-lg bg-zGrey-1 p-6 rounded-lg shadow w-1/2"
     >
       {/* Hidden Field for User ID - Essential for the Server Action to identify the user */}
       <input type="hidden" name="id" value={initialUser.id} />
@@ -66,7 +66,7 @@ export default function EditUserForm({ initialUser }: EditUserFormProps) {
       <div>
         <label
           htmlFor="name"
-          className="block text-sm font-medium text-gray-700"
+          className="block text-sm font-medium text-white"
         >
           Full Name
         </label>
@@ -76,7 +76,7 @@ export default function EditUserForm({ initialUser }: EditUserFormProps) {
           name="name"
           required
           defaultValue={initialUser.name || ""}
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900"
+          className="mt-1 block w-full px-3 py-2 border border-zGrey-3 rounded-md shadow-sm text-white"
         />
       </div>
 
@@ -84,7 +84,7 @@ export default function EditUserForm({ initialUser }: EditUserFormProps) {
       <div>
         <label
           htmlFor="email"
-          className="block text-sm font-medium text-gray-700"
+          className="block text-sm font-medium text-white"
         >
           Email (Login ID)
         </label>
@@ -95,7 +95,7 @@ export default function EditUserForm({ initialUser }: EditUserFormProps) {
           required
           defaultValue={initialUser.email || ""}
           disabled
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-400 bg-gray-50"
+          className="mt-1 block w-full px-3 py-2 border border-zGrey-3 rounded-md shadow-sm text-gray-500 bg-gray-50"
         />
         {/* Pass the email value via a hidden field since the visible field is disabled */}
         <input type="hidden" name="email" value={initialUser.email || ""} />
@@ -105,7 +105,7 @@ export default function EditUserForm({ initialUser }: EditUserFormProps) {
       <div>
         <label
           htmlFor="role"
-          className="block text-sm font-medium text-gray-700"
+          className="block text-sm font-medium text-white"
         >
           User Role
         </label>
@@ -114,18 +114,18 @@ export default function EditUserForm({ initialUser }: EditUserFormProps) {
           name="role"
           required
           defaultValue={initialUser.role}
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900"
+          className="mt-1 block w-full px-3 py-2 border border-zGrey-3 rounded-md shadow-sm text-white"
         >
           {Object.values(UserRole).map((role) => (
-            <option key={role} value={role}>
+            <option className="bg-zGrey-2" key={role} value={role}>
               {role.charAt(0) + role.slice(1).toLowerCase()}
             </option>
           ))}
         </select>
       </div>
 
-      <p className="text-sm text-gray-500 pt-2">
-        Note: Password reset must be done separately by an Admin.
+      <p className="text-sm text-gray-500 pt-2 text-center">
+        Note: Password reset must be done separately by {initialUser.name}.
       </p>
 
       <button

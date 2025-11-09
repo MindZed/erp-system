@@ -109,20 +109,20 @@ export default function DeleteTargetButton({
 
       {/* Confirmation Modal */}
       {showConfirm && (
-        <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-red-900/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div
             ref={modalRef}
-            className="bg-white p-6 sm:p-8 rounded-xl shadow-xl w-full max-w-lg text-gray-900 overflow-y-auto max-h-[90vh] flex flex-col"
+            className="bg-zGrey-2 p-6 rounded-xl shadow-xl w-full max-w-lg text-white overflow-hidden"
           >
-            <h3 className="text-xl sm:text-2xl font-extrabold text-red-600 mb-4 text-center leading-snug break-words whitespace-normal">
-              CONFIRM PERMANENT DELETION
+            <h3 className="text-xl md:text-2xl font-extrabold text-red-500 mb-4 text-center leading-snug break-words whitespace-normal">
+              CONFIRM PERMANENT DELETION !
             </h3>
 
-            <p className="mb-6 text-sm sm:text-base text-center leading-normal break-words whitespace-normal">
-              This action is <strong>IRREVERSIBLE</strong>.
-              <br className="hidden sm:block" />
-              To confirm, please type the word
-              <strong className="text-red-600"> 'CONFIRM' </strong> below.
+            <p className="mb-6 text-sm text-center leading-normal whitespace-normal ">
+              This action is <strong> IRREVERSIBLE</strong>. To confirm, please
+              type the word
+              <strong className="text-red-500"> 'CONFIRM' </strong>
+              below.
             </p>
 
             <input
@@ -130,7 +130,7 @@ export default function DeleteTargetButton({
               type="text"
               value={confirmationText}
               onChange={(e) => setConfirmationText(e.target.value)}
-              className="w-48 p-2 mb-6 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300 text-center mx-auto text-sm sm:text-base"
+              className="w-40 p-2 mb-4 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-center"
               placeholder="Type CONFIRM"
               disabled={isDeleting}
             />
@@ -145,11 +145,12 @@ export default function DeleteTargetButton({
               </button>
               <button
                 onClick={handleConfirmDelete}
-                disabled={isDeleting || normalizedConfirmation() !== 'CONFIRM'}
-                className={`px-4 py-2 rounded-lg text-white text-sm sm:text-base transition ${isDeleting || normalizedConfirmation() !== 'CONFIRM'
-                    ? 'bg-red-400/70 cursor-not-allowed'
-                    : 'bg-red-600 hover:bg-red-700'
-                  }`}
+                disabled={isDeleting || normalizedConfirmation() !== "CONFIRM"}
+                className={`px-4 py-2 rounded-lg text-white transition ${
+                  isDeleting || normalizedConfirmation() !== "CONFIRM"
+                    ? "bg-red-600 opacity-50 cursor-not-allowed"
+                    : "bg-red-600 hover:bg-red-700"
+                }`}
               >
                 {isDeleting ? 'Processing...' : 'Delete Permanently'}
               </button>

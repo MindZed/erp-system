@@ -15,12 +15,14 @@ export default function NewClientPage() {
   const [state, dispatch] = useActionState(createClient, initialState);
 
   return (
-    <div className="p-8 text-gray-900">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Add New Client</h1>
+    <div className="p-8 flex flex-col justify-center items-center">
+      <div className="flex justify-between items-center mb-6 w-full">
+        <h1 className="text-2xl font-bold uppercase text-white">
+          Add New Client
+        </h1>
         <Link
           href="/dashboard/clients"
-          className="text-blue-600 hover:underline"
+          className="text-blue-200 hover:underline"
         >
           ← Back to List
         </Link>
@@ -40,13 +42,13 @@ export default function NewClientPage() {
 
       <form
         action={dispatch}
-        className="space-y-4 max-w-lg bg-white p-6 rounded-lg shadow"
+        className="space-y-4 max-w-lg bg-zGrey-1 p-6 rounded-lg shadow w-1/2"
       >
         {/* Name Field */}
         <div>
           <label
             htmlFor="name"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-white"
           >
             Client Name (Company)
           </label>
@@ -55,7 +57,7 @@ export default function NewClientPage() {
             id="name"
             name="name"
             required
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900"
+            className="mt-1 block w-full px-3 py-2 border border-zGrey-3 rounded-md shadow-sm text-white"
           />
         </div>
 
@@ -63,7 +65,7 @@ export default function NewClientPage() {
         <div>
           <label
             htmlFor="contactEmail"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-white"
           >
             Contact Email
           </label>
@@ -71,7 +73,7 @@ export default function NewClientPage() {
             type="email"
             id="contactEmail"
             name="contactEmail"
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900"
+            className="mt-1 block w-full px-3 py-2 border border-zGrey-3 rounded-md shadow-sm text-white"
           />
         </div>
 
@@ -79,7 +81,7 @@ export default function NewClientPage() {
         <div>
           <label
             htmlFor="phone"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-white"
           >
             Phone No.
           </label>
@@ -87,7 +89,7 @@ export default function NewClientPage() {
             type="tel"
             id="phone"
             name="phone"
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900"
+            className="mt-1 block w-full px-3 py-2 border border-zGrey-3 rounded-md shadow-sm text-white"
           />
         </div>
 
@@ -95,7 +97,7 @@ export default function NewClientPage() {
         <div>
           <label
             htmlFor="phone"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-white"
           >
             Status
           </label>
@@ -104,19 +106,19 @@ export default function NewClientPage() {
             name="status"
             required
             defaultValue={ClientStatus.ACTIVE}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900"
+            className="mt-1 block w-full px-3 py-2 border border-zGrey-3 rounded-md shadow-sm text-white"
           >
-          {Object.values(ClientStatus).map((status) => (
-            <option key={status} value={status}>
-              {status.charAt(0) + status.slice(1).toLowerCase()}
-            </option>
-          ))}
-          </ select>
+            {Object.values(ClientStatus).map((status) => (
+              <option className="bg-zGrey-2" key={status} value={status}>
+                {status.charAt(0) + status.slice(1).toLowerCase()}
+              </option>
+            ))}
+          </select>
         </div>
 
         <button
           type="submit"
-          className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition duration-150"
+          className="w-full bg-active/50 font-semibold text-lg text-white py-2 px-4 rounded-md hover:bg-active hover:text-green-900 hover:scale-[1.02] transition duration-150"
         >
           Create Client
         </button>

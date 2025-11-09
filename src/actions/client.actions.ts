@@ -20,7 +20,7 @@ interface DeleteActionResult {
 const checkAuth = async () => {
   const session = await auth();
   const role = (session?.user as any)?.role;
-  const allowedAuth = [UserRole.ADMIN];
+  const allowedAuth = [UserRole.ADMIN, UserRole.MANAGER];
 
   if (!session || !session.user || !allowedAuth.includes(role)) {
     throw new Error("Not Authorized: Access Denied");
