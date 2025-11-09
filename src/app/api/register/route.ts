@@ -41,7 +41,7 @@ export async function POST(request: Request) {
         email,
         name, // 4. Add 'name' to the data being saved
         hashedPassword,
-        role: UserRole.USER,
+        role: UserRole.EMPLOYEE,
       },
     });
 

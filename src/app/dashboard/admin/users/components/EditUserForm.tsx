@@ -1,4 +1,4 @@
-// src/app/dashboard/admin/users/components/EditUserForm.tsx
+// mindzed/erp-system/erp-system-02abb7b4465004ac728e062c9a31c5e4ef5ac40a/src/app/dashboard/admin/users/components/EditUserForm.tsx
 
 "use client";
 
@@ -16,8 +16,16 @@ interface UserData {
   role: UserRole;
 }
 
-const initialState = {
+// FIX: Define the ActionState structure explicitly to match the action's contract
+interface ActionState {
+  message: string;
+  isSuccess: boolean;
+}
+
+// FIX: Initialize state with the correct full structure
+const initialState: ActionState = { 
   message: "",
+  isSuccess: false,
 };
 
 interface EditUserFormProps {
@@ -26,7 +34,11 @@ interface EditUserFormProps {
 
 export default function EditUserForm({ initialUser }: EditUserFormProps) {
 
-  const [state, dispatch] = useActionState(updateUser, initialState);
+  // FIX: Cast updateUser to the expected (state, formData) => Promise<State> signature
+  const [state, dispatch] = useActionState(
+    updateUser as (prevState: ActionState, formData: FormData) => Promise<ActionState>, 
+    initialState
+  );
 
   return (
     <form
@@ -40,7 +52,8 @@ export default function EditUserForm({ initialUser }: EditUserFormProps) {
       {state.message && (
         <p
           className={`mb-4 p-3 rounded ${
-            state.message.startsWith("Success")
+            // Use state.isSuccess flag to determine color
+            state.isSuccess
               ? "bg-green-100 text-green-700"
               : "bg-red-100 text-red-700"
           }`}
