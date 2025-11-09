@@ -84,16 +84,6 @@ export default function LoginPage() {
         <AuthForm onSubmit={handleLogin} />
 
         {error && <p className="text-center text-sm text-red-600">{error}</p>}
-
-        <p className="text-center text-sm text-gray-600">
-          Don't have an account?
-          <Link
-            href="/register" // Link to the dedicated register page
-            className="ml-1 font-medium text-blue-600 hover:text-blue-500"
-          >
-            Sign Up
-          </Link>
-        </p>
       </div>
     </div>
   );

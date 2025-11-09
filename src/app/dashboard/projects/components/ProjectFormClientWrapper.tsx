@@ -1,6 +1,4 @@
 "use client";
-
-import { motion } from "framer-motion";
 import ProjectForm from "./ProjectForm";
 import { ProjectStatus, Priority, UserRole } from "@prisma/client";
 
@@ -32,17 +30,11 @@ export default function ProjectFormClientWrapper({
   currentUser,
 }: WrapperProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-    >
       <ProjectForm
         initialProject={initialProject}
         clients={clients}
         managers={managers}
         currentUser={currentUser}
       />
-    </motion.div>
   );
 }
