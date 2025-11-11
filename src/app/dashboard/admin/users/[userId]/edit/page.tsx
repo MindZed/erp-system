@@ -14,6 +14,7 @@ interface EditUserPageProps {
   };
 }
 
+
 export default async function EditUserPage(props: EditUserPageProps) {
   // FIX: Use Promise.resolve and await on props.params to satisfy the strict compiler check.
   // This tells Next.js to fully resolve the dynamic route parameters before access.
