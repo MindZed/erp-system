@@ -13,11 +13,11 @@ interface NotificationProps {
 }
 
 export default function ClientNotificationBar({ status, name, message, action }: NotificationProps) {
-    if (!status) return null;
-
+    
     const [isVisible, setIsVisible] = useState(true);
     const router = useRouter(); 
-
+    if (!status) return null;
+    
     // Logic for generating the message content
     const generateContent = () => {
         const userName = name ? `'${decodeURIComponent(name)}'` : 'User';

@@ -1,3 +1,5 @@
+// src/app/dashboard/projects/[projectId]/edit/page.tsx
+
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { getProjectFormInitData } from "@/actions/project.actions";
@@ -16,10 +18,16 @@ export const metadata = {
 };
 
 export default async function EditProjectPage({ params }: EditProjectPageProps) {
-  const { projectId } = params;
+  
+  // Use Promise.resolve for safer param handling
+  const { projectId } = await Promise.resolve(params);
 
+  let project, clients, managers, currentUser;
+
+  // --- 1. DATA FETCHING & ERROR HANDLING ---
+  // All error-prone logic is wrapped in try/catch *before* rendering.
   try {
-    const [project, { clients, managers, currentUser }] = await Promise.all([
+    const [projectData, initData] = await Promise.all([
       prisma.project.findUnique({
         where: { id: projectId },
         select: {
@@ -39,49 +47,69 @@ export default async function EditProjectPage({ params }: EditProjectPageProps) 
       getProjectFormInitData(),
     ]);
 
-    if (!project) {
-      return (
-        <div className="min-h-screen flex flex-col justify-center items-center bg-zBlack text-red-500">
-          <h1 className="text-3xl font-bold mb-4">Error: Project Not Found</h1>
-          <p className="mb-6">
-            The project ID <span className="font-mono">{projectId}</span> does
-            not exist in the system.
-          </p>
-          <Link
-            href="/dashboard/projects"
-            className="text-zAccent hover:underline"
-          >
-            ← Back to Project List
-          </Link>
-        </div>
-      );
-    }
+    // Assign data to variables
+    project = projectData;
+    clients = initData.clients;
+    managers = initData.managers;
+    currentUser = initData.currentUser;
 
-    // Convert Date objects to ISO strings for consistent client-side handling
-    const initialProject = {
-      ...project,
-      startDate: project.startDate ? project.startDate.toISOString() : null,
-      endDate: project.endDate ? project.endDate.toISOString() : null,
-    };
-
-    return (
-      <section className="min-h-screen bg-zBlack text-zText flex justify-center items-start py-12 px-4 sm:px-6">
-        <div className="w-full max-w-4xl bg-zGrey-1/90 backdrop-blur-lg border border-zGrey-2 rounded-2xl shadow-2xl p-8 sm:p-10 transition duration-300 hover:shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-          <h1 className="text-3xl font-semibold text-center mb-8 text-white tracking-wide">
-            Edit Project
-          </h1>
-
-          <ProjectFormClientWrapper
-            initialProject={initialProject}
-            clients={clients}
-            managers={managers}
-            currentUser={currentUser}
-          />
-        </div>
-      </section>
-    );
   } catch (error) {
     console.error("EDIT_PROJECT_PAGE_ERROR", error);
-    redirect("/dashboard/projects");
+    redirect("/dashboard/projects"); // Redirect on any fetching error
   }
+
+  // --- 2. "NOT FOUND" HANDLING ---
+  // Handle the specific case where the project wasn't found.
+  // This JSX is returned safely, outside the try/catch.
+  if (!project) {
+    return (
+      <div className="p-8 text-red-600">
+        <h1 className="text-3xl font-bold mb-4">Error: Project Not Found</h1>
+        <p className="mb-6">
+          The project ID <span className="font-mono bg-red-100 p-1 rounded">{projectId}</span> does
+          not exist in the system.
+        </p>
+        <Link
+          href="/dashboard/projects"
+          className="text-blue-600 hover:underline mt-4 block"
+        >
+          ← Back to Project List
+        </Link>
+      </div>
+    );
+  }
+
+  // --- 3. PREPARE DATA FOR CLIENT ---
+  // Convert Date objects for safe passing to the Client Component
+  const initialProject = {
+    ...project,
+    startDate: project.startDate ? project.startDate.toISOString() : null,
+    endDate: project.endDate ? project.endDate.toISOString() : null,
+  };
+
+  // --- 4. SAFE JSX RENDER ---
+  // This only runs if data fetching succeeded and the project was found.
+  return (
+    // Use standard dashboard page styling
+    <div className="p-8 text-gray-900">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">
+          Edit Project: {project.name}
+        </h1>
+        <Link 
+          href="/dashboard/projects"
+          className="text-blue-600 hover:underline"
+        >
+            ← Back to Project List
+        </Link>
+      </div>
+
+      <ProjectFormClientWrapper
+        initialProject={initialProject}
+        clients={clients}
+        managers={managers}
+        currentUser={currentUser}
+      />
+    </div>
+  );
 }

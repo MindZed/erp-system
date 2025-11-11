@@ -21,7 +21,11 @@ function SuccessMessage({
   clearForm: () => void;
 }) {
   const [isVisible, setIsVisible] = useState(true);
-
+  
+  const handleDismiss = () => {
+    setIsVisible(false);
+    // We clear the form *only* on success, which the parent handles
+  };
   // After 5 seconds, automatically dismiss the message
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -32,10 +36,6 @@ function SuccessMessage({
     return () => clearTimeout(timer);
   }, [isVisible]);
 
-  const handleDismiss = () => {
-    setIsVisible(false);
-    // We clear the form *only* on success, which the parent handles
-  };
 
   if (!isVisible || !message) return null;
 
