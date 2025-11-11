@@ -7,8 +7,9 @@ import { UserRole } from '@prisma/client';
 import Link from 'next/link';
 import EditUserForm from '../../components/EditUserForm'; 
 
-// Define the expected props for this dynamic server component
-// Define the expected props for this dynamic server component
+//
+// FIX 1: The interface MUST include searchParams
+//
 interface EditUserPageProps {
   params: {
     userId: string;
@@ -16,10 +17,11 @@ interface EditUserPageProps {
   searchParams?: { [key: string]: string | string[] | undefined };
 }
 
-
 export default async function EditUserPage(props: EditUserPageProps) {
-  // FIX: Use Promise.resolve and await on props.params to satisfy the strict compiler check.
-  // This tells Next.js to fully resolve the dynamic route parameters before access.
+  
+  //
+  // FIX 2: Access params directly from props
+  //
   const { userId } = props.params;
 
   // 1. Server-side protection (Check for Admin role)
