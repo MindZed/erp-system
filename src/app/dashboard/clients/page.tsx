@@ -113,7 +113,7 @@ const ClientListPage = async (props: ClientListPageProps) => {
 
                       <DeleteTargetButton
                         targetId={client.id}
-                        className="p-1 bg-zGrey-2 rounded-md hover:bg-zGrey-3/50 text-xs"
+                        className="p-1 bg-zGrey-2 rounded-md  text-xs"
                         target="client"
                       />
                     </div>

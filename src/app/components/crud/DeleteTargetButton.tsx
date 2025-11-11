@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { deleteUser } from "@/actions/admin/user.actions";
 import { deleteClient } from "@/actions/client.actions";
 import { deleteProject, deleteTask } from "@/actions/project.actions";
+import { MdiDeleteOutline } from "../Svgs/svgs";
 
 interface DeleteTargetButtonProps {
   targetId: string;
@@ -102,9 +103,9 @@ export default function DeleteTargetButton({
       <button
         onClick={() => setShowConfirm(true)}
         disabled={isDeleting}
-        className={`text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed ${className ?? ""}`}
+        className={`text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-500 ${className ?? ""}`}
       >
-        {isDeleting ? "Deleting..." : "Delete"}
+        <MdiDeleteOutline className="h-5" />
       </button>
 
       {/* Confirmation Modal */}

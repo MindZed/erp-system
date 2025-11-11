@@ -2,6 +2,7 @@
 
 import { auth } from "@/auth"; 
 import { redirect } from "next/navigation";
+import PrintClientsButton from "../components/PrintClientButton";
 // REMOVED: import SignOutButton from "../components/SignOutButton";
 
 export default async function DashboardPage() {
@@ -20,6 +21,10 @@ export default async function DashboardPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Dashboard Overview</h1>
         {/* REMOVED: <SignOutButton /> */}
+      </div>
+
+      <div className="mb-8">
+        <PrintClientsButton />
       </div>
 
       <p className="mt-4">You are logged in as:</p>
