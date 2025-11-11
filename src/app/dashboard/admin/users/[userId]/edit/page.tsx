@@ -8,10 +8,12 @@ import Link from 'next/link';
 import EditUserForm from '../../components/EditUserForm'; 
 
 // Define the expected props for this dynamic server component
+// Define the expected props for this dynamic server component
 interface EditUserPageProps {
   params: {
     userId: string;
   };
+  searchParams?: { [key: string]: string | string[] | undefined };
 }
 
 
