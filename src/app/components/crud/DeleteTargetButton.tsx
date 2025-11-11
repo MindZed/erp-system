@@ -122,7 +122,7 @@ export default function DeleteTargetButton({
             <p className="mb-6 text-sm text-center leading-normal whitespace-normal ">
               This action is <strong> IRREVERSIBLE</strong>. To confirm, please
               type the word
-              <strong className="text-red-500"> 'CONFIRM' </strong>
+              <strong className="text-red-500"> &apos;CONFIRM&apos; </strong>
               below.
             </p>
 

@@ -13,12 +13,12 @@ interface NotificationProps {
 }
 
 export default function ProjectNotificationBar({ status, name, message, action }: NotificationProps) {
-    if (!status) return null;
-
+    
     const [isVisible, setIsVisible] = useState(true);
     const router = useRouter(); 
     const pathname = usePathname(); 
-
+    
+    if (!status) return null;
     // Logic for generating the message content
     const generateContent = () => {
         const entityName = name ? `'${decodeURIComponent(name)}'` : 'Item';
