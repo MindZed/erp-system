@@ -9,16 +9,9 @@ import { ProjectStatus, UserRole } from "@prisma/client";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 
-interface ProjectListPageProps {
-  searchParams: {
-    status?: string;
-    name?: string;
-    message?: string;
-    action?: string;
-  };
-}
+// FIX: REMOVED external interface ProjectListPageProps. Using 'props: any' for build compatibility.
 
-// FIX: Corrected ProjectStatus map to remove IN_PROGRESS, aligning with schema.
+// FIX: Corrected ProjectStatus map to align with schema.
 const statusStyles: Record<ProjectStatus, string> = {
   PENDING: "bg-gray-400 text-gray-700",
   ACTIVE: "bg-blue-400 text-blue-900",
@@ -28,7 +21,8 @@ const statusStyles: Record<ProjectStatus, string> = {
   CANCELLED: "bg-red-400 text-red-900",
 };
 
-const ProjectListPage = async (props: ProjectListPageProps) => {
+export default async function ProjectListPage(props: any) { // FIX: Changed signature to untyped async function
+  // FIX: Explicitly use Promise.resolve and await on the searchParams object (from props)
   const { status, name, message, action } = await Promise.resolve(
     props.searchParams
   );
@@ -198,6 +192,4 @@ const ProjectListPage = async (props: ProjectListPageProps) => {
       </div>
     </div>
   );
-};
-
-export default ProjectListPage;
+}

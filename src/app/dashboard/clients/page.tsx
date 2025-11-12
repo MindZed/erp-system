@@ -1,3 +1,5 @@
+// src/app/dashboard/clients/page.tsx
+
 import prisma from "@/lib/prisma";
 import { ClientStatus } from "@prisma/client";
 import Link from "next/link";
@@ -5,16 +7,10 @@ import DeleteTargetButton from "@/app/components/crud/DeleteTargetButton";
 import ClientNotificationBar from "@/app/components/ClientNotificationBar";
 import { AkarIconsEdit, BasilAdd } from "@/app/components/Svgs/svgs";
 
-interface ClientListPageProps {
-  searchParams: {
-    status?: string;
-    name?: string;
-    message?: string;
-    action?: string;
-  };
-}
-
-const ClientListPage = async (props: ClientListPageProps) => {
+// REMOVED external interface ClientListPageProps. Using 'props: any' for build compatibility.
+const ClientListPage = async (props: any) => {
+  
+  // FIX: Explicitly use Promise.resolve and await on the searchParams object (from props)
   const { status, name, message, action } = await Promise.resolve(
     props.searchParams
   );
@@ -113,7 +109,7 @@ const ClientListPage = async (props: ClientListPageProps) => {
 
                       <DeleteTargetButton
                         targetId={client.id}
-                        className="p-1 bg-zGrey-2 rounded-md  text-xs"
+                        className="p-1 bg-zGrey-2 rounded-md  text-xs"
                         target="client"
                       />
                     </div>

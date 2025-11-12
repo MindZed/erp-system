@@ -1,105 +1,127 @@
-// src/app/dashboard/projects/[projectId]/tasks/[taskId]/edit/page.tsx
+// src/app/dashboard/clients/page.tsx
 
 import prisma from "@/lib/prisma";
-// Assuming getTaskFormInitData is in a file like this
-import { getTaskFormInitData } from "@/actions/project.actions"; 
-import TaskForm from "../../components/TaskForm";
-import { redirect } from "next/navigation";
+import { ClientStatus } from "@prisma/client";
 import Link from "next/link";
-import { UserRole } from "@prisma/client"; // Import UserRole for filtering
+import DeleteTargetButton from "@/app/components/crud/DeleteTargetButton";
+import ClientNotificationBar from "@/app/components/ClientNotificationBar";
+import { AkarIconsEdit, BasilAdd } from "@/app/components/Svgs/svgs";
 
-export const metadata = {
-  title: "Edit Task | MindZed ERP",
-  description: "Edit an existing project task and update its details.",
-};
-
-export default async function EditTaskPage({
-  params,
-}: {
-  params: { projectId: string; taskId: string };
-}) {
+// REMOVED external interface ClientListPageProps. Using 'props: any' for build compatibility.
+const ClientListPage = async (props: any) => {
   
-  // Use Promise.resolve for safer param handling, as seen in your other files
-  const { projectId, taskId } = await Promise.resolve(params);
+  // FIX: Explicitly use Promise.resolve and await on the searchParams object (from props)
+  const { status, name, message, action } = await Promise.resolve(
+    props.searchParams
+  );
 
-  let task, filteredAssignees, currentUserId;
+  const clients = await prisma.client.findMany({
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      name: true,
+      contactEmail: true,
+      phone: true,
+      status: true,
+      createdAt: true,
+    },
+  });
 
-  // --- 1. DATA FETCHING & ERROR HANDLING ---
-  // All error-prone logic is wrapped in try/catch *before* rendering.
-  try {
-    // ✅ Fetch task details
-    const taskData = await prisma.task.findUnique({
-      where: { id: taskId, projectId: projectId }, // Ensure task belongs to project
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        assignedToId: true,
-        startDate: true,
-        endDate: true,
-        status: true,
-        statusReason: true,
-        project: {
-          select: { id: true, name: true },
-        },
-      },
-    });
-
-    if (!taskData) {
-      // Task not found or doesn't belong to this project
-      redirect(`/dashboard/projects/${projectId}`);
-    }
-    task = taskData; // Assign to outer scope
-
-    // ✅ Get assignable users
-    const initData = await getTaskFormInitData();
-    currentUserId = initData.currentUserId;
-
-    // ✅ Filter out Admins — only Managers and Employees can appear
-    filteredAssignees = initData.assignableUsers.filter(
-      (user) => user.role === UserRole.MANAGER || user.role === UserRole.EMPLOYEE
-    );
-
-  } catch (error) {
-    console.error("EDIT_TASK_PAGE_ERROR", error);
-    // Redirect to the main projects list as a general fallback
-    redirect(`/dashboard/projects`); 
-  }
-
-  // --- 2. PREPARE DATA FOR CLIENT ---
-  // Convert Date objects for safe passing to the Client Component
-  // We format to YYYY-MM-DD string, which is what <input type="date"> expects
-  const initialTask = {
-    ...task,
-    startDate: task.startDate ? task.startDate.toISOString().split("T")[0] : "",
-    endDate: task.endDate ? task.endDate.toISOString().split("T")[0] : "",
-  };
-
-  // --- 3. SAFE JSX RENDER ---
-  // This only runs if data fetching succeeded and the task was found.
   return (
-    // Use standard dashboard page styling
-    <div className="p-8 text-gray-900">
+    <div className="p-8 text-white bg-zBlack">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">
-          Edit Task: {task.name}
+        <h1 className="text-3xl font-bold uppercase">
+          Client Action ({clients.length})
         </h1>
-        <Link 
-          // Link back to the specific project's dashboard/task list
-          href={`/dashboard/projects/${projectId}`} 
-          className="text-blue-600 hover:underline"
+        <Link
+          href="/dashboard/clients/new"
+          className="bg-primaryRed text-xs text-white py-3 px-4 rounded-2xl hover:bg-primaryRed/80 transition flex items-center justify-center gap-2"
         >
-            ← Back to Project
+          <BasilAdd className="h-7" /> New Client
         </Link>
       </div>
 
-      <TaskForm
-        projectId={projectId}
-        projectName={task.project.name}
-        assignees={filteredAssignees}
-        currentUserId={currentUserId}
-        initialTask={initialTask} // Pass the initial task data for editing
+      <ClientNotificationBar
+        status={status}
+        name={name}
+        message={message}
+        action={action}
       />
+
+      <div className="bg-zGrey-1 shadow overflow-hidden sm:rounded-lg">
+        {clients.length === 0 ? (
+          <p className="p-4 text-center text-white">No system clients found.</p>
+        ) : (
+          <table className="min-w-full divide-y divide-zGrey-2">
+            <thead className="bg-zGrey-2 text-white uppercase tracking-wider text-xs">
+              <tr>
+                <th className="px-6 py-3 text-left font-medium ">Name</th>
+                <th className="px-6 py-3 text-left font-medium">Email</th>
+                <th className="px-6 py-3 text-left font-medium">Phone</th>
+                <th className="px-6 py-3 text-left font-medium">Status</th>
+                <th className="px-6 py-3 text-left font-medium">Created</th>
+                <th className="px-6 py-3 text-center font-medium ">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-zGrey-1 divide-y divide-zGrey-2">
+              {clients.map((client) => (
+                <tr key={client.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-normal ">
+                    {client.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-normal ">
+                    {client.contactEmail}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-normal ">
+                    {client.phone}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        client.status === ClientStatus.ACTIVE
+                          ? "bg-green-400 text-green-900"
+                          : client.status === ClientStatus.ON_HOLD
+                          ? "bg-amber-500 text-orange-800"
+                          : "bg-gray-400 text-gray-700"
+                      }`}
+                    >
+                      {client.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-normal ">
+                    {new Date(client.createdAt).toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </td>
+
+                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                    <div className="flex justify-center items-center space-x-2">
+                      <Link
+                        href={`/dashboard/clients/${client.id}/edit`}
+                        className="p-1 bg-zGrey-2 rounded-md hover:bg-zGrey-3/50 text-active"
+                      >
+                        <AkarIconsEdit className="h-5" />
+                      </Link>
+
+                      <span className="text-gray-400">|</span>
+
+                      <DeleteTargetButton
+                        targetId={client.id}
+                        className="p-1 bg-zGrey-2 rounded-md  text-xs"
+                        target="client"
+                      />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
-}
+};
+
+export default ClientListPage;

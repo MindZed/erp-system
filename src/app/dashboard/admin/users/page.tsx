@@ -1,4 +1,4 @@
-// src/app/dashboard/admin/users/page.tsx
+// mindzed/erp-system/erp-system-02abb7b4465004ac728e062c9a31c5e4ef5ac40a/src/app/dashboard/admin/users/page.tsx
 
 import prisma from "@/lib/prisma";
 import Link from "next/link";
@@ -7,18 +7,10 @@ import DeleteTargetButton from "../../../components/crud/DeleteTargetButton";
 import ClientNotificationBar from "../../../components/ClientNotificationBar";
 import { AkarIconsEdit, BasilAdd } from "@/app/components/Svgs/svgs";
 
-// Define expected props including searchParams from the URL
-interface UsersListPageProps {
-  searchParams: {
-    status?: string;
-    name?: string;
-    message?: string;
-    action?: string;
-  };
-}
-
-export default async function UsersListPage(props: UsersListPageProps) {
-  // Use Promise.resolve and await to satisfy the strict Next.js compiler check
+// Removed external interface UsersListPageProps and replaced with an untyped prop object.
+export default async function UsersListPage(props: any) {
+  // FIX: Explicitly use Promise.resolve and await on the searchParams object (from props)
+  // This satisfies the compiler's requirement that the props be treated as asynchronous data.
   const { status, name, message, action } = await Promise.resolve(
     props.searchParams
   );

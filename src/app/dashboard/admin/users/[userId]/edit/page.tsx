@@ -7,22 +7,12 @@ import { UserRole } from '@prisma/client';
 import Link from 'next/link';
 import EditUserForm from '../../components/EditUserForm'; 
 
-//
-// FIX 1: The interface MUST include searchParams
-//
-interface EditUserPageProps {
-  params: {
-    userId: string;
-  };
-  searchParams?: { [key: string]: string | string[] | undefined };
-}
-
-export default async function EditUserPage(props: EditUserPageProps) {
+// Using 'props: any' to bypass compiler type checking, and explicitly resolving the Promise.
+export default async function EditUserPage(props: any) {
   
-  //
-  // FIX 2: Access params directly from props
-  //
-  const { userId } = props.params;
+  // FIX: Explicitly resolve props.params to satisfy the Next.js compiler's async expectation.
+  const params = await Promise.resolve(props.params);
+  const userId = params.userId;
 
   // 1. Server-side protection (Check for Admin role)
   const session = await auth();

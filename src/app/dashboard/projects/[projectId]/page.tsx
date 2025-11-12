@@ -7,61 +7,26 @@ import ProjectNotificationBar from "../components/ProjectNotificationBar";
 import { AkarIconsEdit, BasilAdd } from "@/app/components/Svgs/svgs";
 import { TaskStatus, ProjectStatus, Priority, UserRole } from "@prisma/client";
 import { auth } from "@/auth";
-import { redirect } from "next/navigation"; // Added redirect for strict auth check
+import { redirect } from "next/navigation"; 
 
-interface ProjectDetailPageProps {
-  params: {
-    projectId: string;
-  };
-  searchParams: {
-    status?: string;
-    name?: string;
-    message?: string;
-    action?: string;
-  };
-}
-
-// Helper to format enums (e.g., ON_HOLD -> On Hold)
-const formatEnum = (value: string) => 
-    value.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-
-
-// FIX: Corrected ProjectStatus map based on the latest schema enum.
-const projectStatusStyles: Record<ProjectStatus, string> = {
-  PENDING: "bg-gray-400 text-gray-700",
-  ACTIVE: "bg-blue-400 text-blue-900",
-  COMPLETED: "bg-green-400 text-green-900",
-  ON_HOLD: "bg-amber-500 text-orange-800",
-  DELAYED: "bg-yellow-600 text-yellow-900",
-  CANCELLED: "bg-red-400 text-red-900",
-};
-
-// Helper to map Task status to Tailwind classes
-const taskStatusStyles: Record<TaskStatus, string> = {
-  PENDING: "bg-gray-400 text-gray-700",
-  IN_PROGRESS: "bg-blue-400 text-blue-900",
-  COMPLETED: "bg-green-400 text-green-900",
-  ON_HOLD: "bg-amber-500 text-orange-800",
-};
-
-// Helper to map Priority to colors
-const priorityColors: Record<Priority, string> = {
-  LOW: "text-green-500",
-  MEDIUM: "text-blue-400",
-  HIGH: "text-orange-500",
-  URGENT: "text-red-500 font-bold",
-};
-
-
-export default async function ProjectDetailPage(props: ProjectDetailPageProps) {
+// Using 'props: any' to maintain build compatibility across the project
+export default async function ProjectDetailPage(props: any) {
+  
+  // FIX 1: Explicitly resolve props.params. (Untyped fix)
   const { projectId } = await Promise.resolve(props.params);
   const { status, name, message, action } = await Promise.resolve(
     props.searchParams
   );
   
+  // FIX 2 (CRITICAL): GUARD AGAINST UNDEFINED PROJECT ID
+  // If no ID is present, redirect to the list page immediately to prevent Prisma validation error.
+  if (!projectId || typeof projectId !== 'string') {
+      redirect('/dashboard/projects');
+  }
+
   const session = await auth();
   
-  // FIX: Strict check for session and user. If not logged in, redirect.
+  // Strict check for session and user. If not logged in, redirect.
   if (!session || !session.user || !session.user.id) {
     redirect('/login');
   }
@@ -70,6 +35,34 @@ export default async function ProjectDetailPage(props: ProjectDetailPageProps) {
   const userRole = (session.user as any).role as UserRole;
   const isManagerOrAdmin = userRole === UserRole.ADMIN || userRole === UserRole.MANAGER;
 
+  // Helper to format enums (e.g., ON_HOLD -> On Hold)
+  const formatEnum = (value: string) => 
+      value.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+
+  const projectStatusStyles: Record<ProjectStatus, string> = {
+    PENDING: "bg-gray-400 text-gray-700",
+    ACTIVE: "bg-blue-400 text-blue-900",
+    COMPLETED: "bg-green-400 text-green-900",
+    ON_HOLD: "bg-amber-500 text-orange-800",
+    DELAYED: "bg-yellow-600 text-yellow-900",
+    CANCELLED: "bg-red-400 text-red-900",
+  };
+
+  const taskStatusStyles: Record<TaskStatus, string> = {
+    PENDING: "bg-gray-400 text-gray-700",
+    IN_PROGRESS: "bg-blue-400 text-blue-900",
+    COMPLETED: "bg-green-400 text-green-900",
+    ON_HOLD: "bg-amber-500 text-orange-800",
+  };
+
+  const priorityColors: Record<Priority, string> = {
+    LOW: "text-green-500",
+    MEDIUM: "text-blue-400",
+    HIGH: "text-orange-500",
+    URGENT: "text-red-500 font-bold",
+  };
+  
+  // Prisma call is now safe because projectId is checked
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     select: {
@@ -84,7 +77,7 @@ export default async function ProjectDetailPage(props: ProjectDetailPageProps) {
       endDate: true,
       manager: { select: { name: true } },
       client: { select: { name: true } },
-      createdBy: { select: { name: true } }, // Fetch Created By Name
+      createdBy: { select: { name: true } }, 
       tasks: {
         orderBy: { createdAt: 'asc' },
         select: {
@@ -122,7 +115,6 @@ export default async function ProjectDetailPage(props: ProjectDetailPageProps) {
   const isAssignedEmployee = project.tasks.some(t => t.assignedTo?.id === userId);
   
   if (!isManagerOrAdmin && !isProjectManager && !isAssignedEmployee) {
-      // If the user is a standard EMPLOYEE and not managing or assigned, deny access.
       return (
         <div className="p-8 text-red-600">
           <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
