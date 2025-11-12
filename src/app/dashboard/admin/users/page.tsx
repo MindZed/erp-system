@@ -1,16 +1,10 @@
-// mindzed/erp-system/erp-system-02abb7b4465004ac728e062c9a31c5e4ef5ac40a/src/app/dashboard/admin/users/page.tsx
-
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import DeleteTargetButton from "../../../components/crud/DeleteTargetButton";
-// FIX: Corrected import path to the shared components folder
 import ClientNotificationBar from "../../../components/ClientNotificationBar";
 import { AkarIconsEdit, BasilAdd } from "@/app/components/Svgs/svgs";
 
-// Removed external interface UsersListPageProps and replaced with an untyped prop object.
 export default async function UsersListPage(props: any) {
-  // FIX: Explicitly use Promise.resolve and await on the searchParams object (from props)
-  // This satisfies the compiler's requirement that the props be treated as asynchronous data.
   const { status, name, message, action } = await Promise.resolve(
     props.searchParams
   );
@@ -27,10 +21,24 @@ export default async function UsersListPage(props: any) {
     },
   });
 
+  // Custom sorting: ADMIN first, then MANAGER, then EMPLOYEE (or others)
+  const roleOrder = { ADMIN: 1, MANAGER: 2, EMPLOYEE: 3 };
+  const sortedUsers = users.sort((a, b) => {
+    const roleA = roleOrder[a.role as keyof typeof roleOrder] || 99;
+    const roleB = roleOrder[b.role as keyof typeof roleOrder] || 99;
+    if (roleA === roleB) {
+      // If same role, sort by creation date (earlier first)
+      return a.createdAt.getTime() - b.createdAt.getTime();
+    }
+    return roleA - roleB;
+  });
+
   return (
     <div className="px-8 text-white bg-zBlack">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold uppercase">User Action ({users.length})</h1>
+        <h1 className="text-3xl font-bold uppercase">
+          User Action ({sortedUsers.length})
+        </h1>
         <Link
           href="/dashboard/admin/users/new"
           className="bg-primaryRed text-xs text-white py-3 px-4 rounded-2xl hover:bg-primaryRed/80 transition flex items-center justify-center gap-2"
@@ -39,7 +47,6 @@ export default async function UsersListPage(props: any) {
         </Link>
       </div>
 
-      {/* Display the notification bar */}
       <ClientNotificationBar
         status={status}
         name={name}
@@ -48,24 +55,23 @@ export default async function UsersListPage(props: any) {
       />
 
       <div className="bg-zGrey-1 shadow overflow-hidden sm:rounded-lg">
-        {users.length === 0 ? (
+        {sortedUsers.length === 0 ? (
           <p className="p-4 text-center text-white">No system users found.</p>
         ) : (
-          <table className="min-w-full divide-y divide-zGrey-2 ">
+          <table className="min-w-full divide-y divide-zGrey-2">
             <thead className="bg-zGrey-2 text-white uppercase tracking-wider text-xs">
               <tr>
-                <th className="px-6 py-3 text-left font-medium ">Name</th>
+                <th className="px-6 py-3 text-left font-medium">Name</th>
                 <th className="px-6 py-3 text-left font-medium">Email</th>
                 <th className="px-6 py-3 text-left font-medium">Role</th>
                 <th className="px-6 py-3 text-left font-medium">Created</th>
-
                 <th className="px-6 py-3 text-center font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-zGrey-1 divide-y divide-zGrey-2">
-              {users.map((user) => (
+              {sortedUsers.map((user) => (
                 <tr key={user.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-normal ">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-normal">
                     {user.name}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-light">
@@ -84,14 +90,13 @@ export default async function UsersListPage(props: any) {
                       {user.role}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-normal ">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-normal">
                     {new Date(user.createdAt).toLocaleDateString("en-GB", {
                       day: "2-digit",
                       month: "short",
                       year: "numeric",
                     })}
                   </td>
-
                   <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                     <div className="flex justify-center items-center space-x-2">
                       <Link
@@ -100,12 +105,10 @@ export default async function UsersListPage(props: any) {
                       >
                         <AkarIconsEdit className="h-5" />
                       </Link>
-
                       <span className="text-gray-400">|</span>
-
                       <DeleteTargetButton
                         targetId={user.id}
-                        className="p-1 bg-zGrey-2 rounded-md hover:bg-zGrey-3/50 text-xs "
+                        className="p-1 bg-zGrey-2 rounded-md hover:bg-zGrey-3/50 text-xs"
                         target="user"
                       />
                     </div>

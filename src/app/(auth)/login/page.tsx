@@ -10,7 +10,7 @@ import AuthForm from '../../components/AuthForm';
 
 // --- Helper to render the Authenticated State ---
 const AuthenticatedContent = ({ session, signOut }: { session: any, signOut: any }) => (
-  <div className="flex min-h-screen flex-col items-center justify-center space-y-6 text-gray-900">
+  <div className="flex min-h-screen flex-col items-center justify-center space-y-6 text-white-900">
     <h1 className="text-3xl font-bold">
       Welcome, {session.user?.name || session.user?.email}
     </h1>
