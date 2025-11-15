@@ -1,3 +1,5 @@
+// src/actions/project.actions.ts
+
 "use server";
 
 import prisma from "@/lib/prisma";
@@ -18,6 +20,25 @@ interface DeleteActionResult {
   success: boolean;
   message: string;
 }
+
+interface SubtaskFormState {
+  message: string;
+}
+
+interface DeleteResult {
+  success: boolean;
+  message: string;
+}
+
+/**
+ * Helper to ensure an empty string from FormData is converted to null for nullable database fields.
+ * If the value is missing or entirely whitespace, returns null.
+ */
+const cleanString = (value: FormDataEntryValue | null): string | null => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
 
 // ====================================================
 // 0. RBAC CHECK
@@ -64,25 +85,37 @@ export async function getProjectFormInitData() {
 // 2. TASK FORM INIT DATA
 // ====================================================
 export async function getTaskFormInitData() {
-  const { id: currentUserId } = await checkAuth();
+  const session = await auth();
+  const role = (session?.user as any)?.role;
+
+  // Allow ONLY manager + employee
+  const allowedRoles = [UserRole.MANAGER, UserRole.EMPLOYEE];
+
+  if (!session || !session.user || !allowedRoles.includes(role)) {
+    throw new Error("Not Authorized: Only Manager or Employee can create subtasks.");
+  }
+
+  const currentUserId = session.user.id;
 
   const assignableUsersRaw = await prisma.user.findMany({
     where: {
-      OR: [{ role: UserRole.MANAGER }, { role: UserRole.EMPLOYEE }],
+      role: {
+        in: [UserRole.MANAGER, UserRole.EMPLOYEE],
+      },
     },
     select: { id: true, name: true, role: true },
     orderBy: { name: "asc" },
   });
 
-  // ✅ Normalize null names to empty or placeholder
-  const assignableUsers = assignableUsersRaw.map((user) => ({
-    id: user.id,
-    name: user.name ?? "Unnamed User",
-    role: user.role,
+  const assignableUsers = assignableUsersRaw.map((u) => ({
+    id: u.id,
+    name: u.name ?? "Unnamed User",
+    role: u.role,
   }));
 
   return { assignableUsers, currentUserId };
 }
+
 
 
 // ====================================================
@@ -121,12 +154,12 @@ export async function createProject(
     await prisma.project.create({
       data: {
         name: name.trim(),
-        description: description.trim() || null,
+        description: cleanString(description),
         clientId,
         managerId,
         createdById: currentUserId,
-        startDate: startDate ? new Date(startDate) : null,
-        endDate: endDate ? new Date(endDate) : null,
+        startDate: cleanString(startDate) ? new Date(startDate) : null,
+        endDate: cleanString(endDate) ? new Date(endDate) : null,
         priority,
         progress: 0,
         status: ProjectStatus.ACTIVE,
@@ -192,14 +225,14 @@ export async function updateProject(
       where: { id: projectId },
       data: {
         name: name.trim(),
-        description: description.trim() || null,
+        description: cleanString(description),
         clientId,
         managerId,
-        startDate: startDate ? new Date(startDate) : null,
-        endDate: endDate ? new Date(endDate) : null,
+        startDate: cleanString(startDate) ? new Date(startDate) : null,
+        endDate: cleanString(endDate) ? new Date(endDate) : null,
         priority,
         status,
-        statusReason: statusReason.trim() || null,
+        statusReason: cleanString(statusReason),
         progress: isNaN(progress)
           ? 0
           : Math.max(0, Math.min(100, progress)),
@@ -252,7 +285,7 @@ export async function createTask(
 
     const name = formData.get("name") as string;
     const description = (formData.get("description") as string) || "";
-    const assignedToId = formData.get("assignedToId") as string;
+    const assignedToId = (formData.get("assignedToId") as string) || "";
     const startDate = formData.get("startDate") as string;
     const endDate = formData.get("endDate") as string;
 
@@ -263,12 +296,12 @@ export async function createTask(
     await prisma.task.create({
       data: {
         name: name.trim(),
-        description: description.trim() || null,
+        description: cleanString(description),
         projectId,
-        assignedToId: assignedToId || null,
+        assignedToId: cleanString(assignedToId),
         createdById: currentUserId,
-        startDate: startDate ? new Date(startDate) : null,
-        endDate: endDate ? new Date(endDate) : null,
+        startDate: cleanString(startDate) ? new Date(startDate) : null,
+        endDate: cleanString(endDate) ? new Date(endDate) : null,
         status: TaskStatus.PENDING,
         statusReason: null,
       },
@@ -293,7 +326,7 @@ export async function updateTask(
 
     const name = formData.get("name") as string;
     const description = (formData.get("description") as string) || "";
-    const assignedToId = formData.get("assignedToId") as string;
+    const assignedToId = (formData.get("assignedToId") as string) || "";
     const status = formData.get("status") as TaskStatus;
     const statusReason = (formData.get("statusReason") as string) || "";
     const startDate = formData.get("startDate") as string;
@@ -307,12 +340,12 @@ export async function updateTask(
       where: { id: taskId },
       data: {
         name: name.trim(),
-        description: description.trim() || null,
-        assignedToId: assignedToId || null,
-        startDate: startDate ? new Date(startDate) : null,
-        endDate: endDate ? new Date(endDate) : null,
+        description: cleanString(description),
+        assignedToId: cleanString(assignedToId),
+        startDate: cleanString(startDate) ? new Date(startDate) : null,
+        endDate: cleanString(endDate) ? new Date(endDate) : null,
         status,
-        statusReason: statusReason.trim() || null,
+        statusReason: cleanString(statusReason),
       },
     });
 
@@ -346,5 +379,245 @@ export async function deleteTask(
   } catch (error) {
     console.error("DELETE_TASK_ERROR", error);
     return { success: false, message: "Error deleting task." };
+  }
+}
+
+
+// ====================================================
+// UNIVERSAL AUTH FUNCTION
+// ====================================================
+async function getCurrentUser() {
+  const session = await auth();
+  const user = session?.user;
+
+  if (!user) {
+    throw new Error("Not authenticated.");
+  }
+
+  return user as { id: string; role: UserRole };
+}
+
+// ====================================================
+// CREATE SUBTASK
+// ====================================================
+export async function createSubtask(
+  prevState: SubtaskFormState,
+  formData: FormData
+): Promise<SubtaskFormState> {
+  let user;
+
+  try {
+    user = await getCurrentUser();
+  } catch {
+    return { message: "Error: Not authorized to create subtasks." };
+  }
+
+  const taskId = formData.get("taskId") as string;
+  const name = formData.get("name") as string;
+  const descriptionRaw = formData.get("description");
+  const assignedToIdRaw = formData.get("assignedToId"); // Required field
+  const endDateRaw = formData.get("endDate");
+  const assignedByIdRaw = formData.get("assignedById"); // Optional field
+
+  // Process fields
+  const assignedToId = cleanString(assignedToIdRaw);
+  const description = cleanString(descriptionRaw);
+  const assignedById = cleanString(assignedByIdRaw);
+  const endDate = cleanString(endDateRaw) ? new Date(cleanString(endDateRaw)!) : null;
+
+
+  if (!taskId || !name || !assignedToId) {
+    return { message: "Error: Missing required fields (Task ID, Name, Assigned To)." };
+  }
+
+  try {
+    await prisma.subtask.create({
+      data: {
+        taskId,
+        name: name.trim(),
+        description,
+        endDate,
+        status: TaskStatus.PENDING,
+        createdById: user.id,
+        assignedToId,
+        assignedById,
+      },
+    });
+
+    // Revalidate the parent project page
+    const parentTask = await prisma.task.findUnique({
+      where: { id: taskId },
+      select: { projectId: true },
+    });
+    if (parentTask) {
+      revalidatePath(`/dashboard/projects/${parentTask.projectId}`);
+    } else {
+      revalidatePath("/dashboard/projects");
+    }
+
+    return { message: "Success: Subtask created." };
+  } catch (err) {
+    console.error("CREATE_SUBTASK_ERROR", err);
+    return { message: "Error: Could not create subtask." };
+  }
+}
+// ====================================================
+// UPDATE SUBTASK (FULL VERSION)
+// ====================================================
+export async function updateSubtask(
+  prevState: SubtaskFormState,
+  formData: FormData
+): Promise<SubtaskFormState> {
+  let user;
+
+  try {
+    user = await getCurrentUser();
+  } catch {
+    return { message: "Error: Not authorized to update subtasks." };
+  }
+
+  const subtaskId = formData.get("id") as string;
+  const taskId = formData.get("taskId") as string;
+  const projectId = formData.get("projectId") as string;
+
+  const name = formData.get("name") as string;
+  const status = formData.get("status") as TaskStatus;
+
+  // Raw fields
+  const descriptionRaw = formData.get("description");
+  const assignedToIdRaw = formData.get("assignedToId");
+  const statusReasonRaw = formData.get("statusReason");
+  const endDateRaw = formData.get("endDate");
+  const assignedByIdRaw = formData.get("assignedById");
+
+  // Clean fields
+  const description = cleanString(descriptionRaw);
+  const assignedToId = cleanString(assignedToIdRaw);
+  const statusReason = cleanString(statusReasonRaw);
+  const assignedById = cleanString(assignedByIdRaw);
+  const endDate = cleanString(endDateRaw)
+    ? new Date(cleanString(endDateRaw)!)
+    : null;
+
+  if (!subtaskId || !name || !status || !assignedToId) {
+    return { message: "Error: Missing required fields." };
+  }
+
+  try {
+    const existing = await prisma.subtask.findUnique({
+      where: { id: subtaskId },
+      select: {
+        assignedToId: true,
+        createdById: true,
+        taskId: true,
+      },
+    });
+
+    if (!existing) {
+      return { message: "Error: Subtask not found." };
+    }
+
+    const isAdmin = user.role === UserRole.ADMIN;
+    const isManager = user.role === UserRole.MANAGER;
+    const isEmployee = user.role === UserRole.EMPLOYEE;
+    const isCreator = existing.createdById === user.id;
+
+    // 🔥 **RBAC RULES**
+    // Admin + Manager -> Full Access
+    // Employee -> Can ONLY edit their own subtasks
+    if (isEmployee && !isCreator) {
+      return { message: "Error: You can edit only subtasks you created." };
+    }
+
+    const updateData: any = {
+      status,
+      description,
+      endDate,
+      statusReason: statusReason ?? null,
+    };
+
+    // Admin/Manager/Creator can edit name + assignedTo
+    if (isAdmin || isManager || isCreator) {
+      updateData.name = name.trim();
+      updateData.assignedToId = assignedToId;
+    }
+
+    // Only Admin/Manager can change assignedBy
+    if (isAdmin || isManager) {
+      updateData.assignedById = assignedById;
+    }
+
+    await prisma.subtask.update({
+      where: { id: subtaskId },
+      data: updateData,
+    });
+
+    revalidatePath(`/dashboard/projects/${projectId}`);
+    return { message: "Success: Subtask updated." };
+  } catch (err) {
+    console.error("UPDATE_SUBTASK_ERROR", err);
+    return { message: "Error: Could not update subtask." };
+  }
+}
+
+
+// ====================================================
+// DELETE SUBTASK (FULL VERSION)
+// ====================================================
+export async function deleteSubtask(subtaskId: string): Promise<DeleteResult> {
+  let user;
+
+  try {
+    user = await getCurrentUser();
+  } catch {
+    return { success: false, message: "Error: Not authorized." };
+  }
+
+  if (!subtaskId) {
+    return { success: false, message: "Error: Invalid subtask ID." };
+  }
+
+  try {
+    const existing = await prisma.subtask.findUnique({
+      where: { id: subtaskId },
+      select: {
+        createdById: true,
+        taskId: true,
+        name: true,
+      },
+    });
+
+    if (!existing) {
+      return { success: false, message: "Error: Subtask not found." };
+    }
+
+    const isAdmin = user.role === UserRole.ADMIN;
+    const isManager = user.role === UserRole.MANAGER;
+    const isCreator = existing.createdById === user.id;
+
+    // 🚫 Employee can only delete THEIR OWN subtasks
+    if (!isAdmin && !isManager && !isCreator) {
+      return {
+        success: false,
+        message: "Error: You can delete only subtasks you created.",
+      };
+    }
+
+    await prisma.subtask.delete({ where: { id: subtaskId } });
+
+    const parentTask = await prisma.task.findUnique({
+      where: { id: existing.taskId },
+      select: { projectId: true },
+    });
+
+    if (parentTask) revalidatePath(`/dashboard/projects/${parentTask.projectId}`);
+
+    return {
+      success: true,
+      message: `Subtask "${existing.name}" deleted successfully.`,
+    };
+  } catch (err) {
+    console.error("DELETE_SUBTASK_ERROR", err);
+    return { success: false, message: "Error: Failed to delete subtask." };
   }
 }

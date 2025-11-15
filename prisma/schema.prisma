@@ -17,22 +17,22 @@ generator client {
 
 // User model (System employees/team members)
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime? @map("emailVerified")
-  image         String?
+  id             String    @id @default(cuid())
+  name           String?
+  email          String?   @unique
+  emailVerified  DateTime? @map("emailVerified")
+  image          String?
   hashedPassword String? // For credentials login
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   // Permissions (from previous steps)
-  role          UserRole  @default(EMPLOYEE)
+  role UserRole @default(EMPLOYEE)
 
   // Auth Relations (required by adapter)
   accounts Account[]
   sessions Session[]
-  
+
   // New: Project/Task Relations
   managedProjects Project[] @relation("ManagedProjects")
   createdProjects Project[] @relation("CreatedProjects")
@@ -43,7 +43,6 @@ model User {
   createdSubtasks    Subtask[] @relation("CreatedSubtasks")
   assignedSubtasks   Subtask[] @relation("AssignedSubtasks")
   assignedBySubtasks Subtask[] @relation("AssignedBySubtasks")
-
 }
 
 enum UserRole {
@@ -54,17 +53,17 @@ enum UserRole {
 
 // --- CLIENT MODEL ---
 model Client {
-  id        String    @id @default(cuid())
-  name      String    @unique 
+  id           String       @id @default(cuid())
+  name         String       @unique
   contactEmail String?
-  phone     String?
-  status    ClientStatus @default(ACTIVE)
-  
+  phone        String?
+  status       ClientStatus @default(ACTIVE)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   // New: Project Relations
-  projects  Project[]
+  projects Project[]
 }
 
 enum ClientStatus {
@@ -72,6 +71,7 @@ enum ClientStatus {
   ON_HOLD
   INACTIVE
 }
+
 // --- END CLIENT MODEL ---
 
 // ----------------------------------------------------
@@ -79,38 +79,38 @@ enum ClientStatus {
 // ----------------------------------------------------
 
 model Project {
-  id          String         @id @default(cuid())
-  name        String         @unique
+  id          String  @id @default(cuid())
+  name        String  @unique
   description String?
-  
+
   // New Fields based on requirements (Progress, Status Reason, Priority)
-  progress    Int            @default(0) // Percentage 0-100
-  status      ProjectStatus  @default(PENDING)
-  statusReason String?        @map("status_reason")
-  priority    Priority       @default(MEDIUM) 
-  
+  progress     Int           @default(0) // Percentage 0-100
+  status       ProjectStatus @default(PENDING)
+  statusReason String?       @map("status_reason")
+  priority     Priority      @default(MEDIUM)
+
   // Dates
-  startDate   DateTime?      @map("start_date") @db.Date
-  endDate     DateTime?      @map("end_date") @db.Date
+  startDate DateTime? @map("start_date") @db.Date
+  endDate   DateTime? @map("end_date") @db.Date
 
   // Relations
-  clientId    String
-  client      Client         @relation(fields: [clientId], references: [id])
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
 
-  managerId   String
-  manager     User           @relation("ManagedProjects", fields: [managerId], references: [id])
-  
+  managerId String
+  manager   User   @relation("ManagedProjects", fields: [managerId], references: [id])
+
   // Created By (Required for all Projects)
-  createdById String         @map("created_by_id")
-  createdBy   User           @relation("CreatedProjects", fields: [createdById], references: [id])
+  createdById String @map("created_by_id")
+  createdBy   User   @relation("CreatedProjects", fields: [createdById], references: [id])
 
-  tasks       Task[]
+  tasks Task[]
 
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@map("Project")
   @@index([createdById]) // Index for createdBy to facilitate lookups
+  @@map("Project")
 }
 
 // Statuses based on your explicit list (plus PENDING as a start state)
@@ -123,7 +123,7 @@ enum ProjectStatus {
   CANCELLED
 }
 
-enum Priority { // New Enum for Priority
+enum Priority {
   LOW
   MEDIUM
   HIGH
@@ -131,37 +131,36 @@ enum Priority { // New Enum for Priority
 }
 
 model Task {
-  id          String     @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
   description String?
-  
+
   // Status and Reason
-  status      TaskStatus @default(PENDING)
+  status       TaskStatus @default(PENDING)
   statusReason String?    @map("status_reason")
-  
+
   // Dates
-  startDate   DateTime?  @map("start_date") @db.Date
-  endDate     DateTime?  @map("end_date") @db.Date
-  
+  startDate DateTime? @map("start_date") @db.Date
+  endDate   DateTime? @map("end_date") @db.Date
+
   // Relations
-  projectId   String
-  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  assignedToId String?     @map("assigned_to_id")
-  assignedTo   User?       @relation("AssignedTasks", fields: [assignedToId], references: [id])
-  
+  assignedToId String? @map("assigned_to_id")
+  assignedTo   User?   @relation("AssignedTasks", fields: [assignedToId], references: [id])
+
   // Created By (Optional for Tasks, as creation might be complex)
-  createdById  String?     @map("created_by_id")
-  createdBy    User?       @relation("CreatedTasks", fields: [createdById], references: [id])
+  createdById String? @map("created_by_id")
+  createdBy   User?   @relation("CreatedTasks", fields: [createdById], references: [id])
 
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  subtasks     Subtask[]  // relation to Subtask
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  subtasks  Subtask[] // relation to Subtask
 
-
-  @@map("Task")
   @@index([assignedToId])
   @@index([createdById])
+  @@map("Task")
 }
 
 enum TaskStatus {
@@ -172,36 +171,36 @@ enum TaskStatus {
 }
 
 model Subtask {
-  id          String      @id @default(cuid())
-  name        String      @db.VarChar(255)
-  description String?
-  startDate   DateTime?   @map("start_date") @db.Date
-  endDate     DateTime?   @map("end_date") @db.Date
-  status      TaskStatus  @default(PENDING)
+  id           String     @id @default(cuid())
+  name         String     @db.VarChar(255)
+  description  String?
+  startDate    DateTime?  @map("start_date") @db.Date
+  endDate      DateTime?  @map("end_date") @db.Date
+  status       TaskStatus @default(PENDING)
+  statusReason String?
 
   // Relations
-  taskId      String      @map("task_id")
-  task        Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId String @map("task_id")
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   // Tracking fields
-  createdById String      @map("created_by_id")
-  createdBy   User        @relation("CreatedSubtasks", fields: [createdById], references: [id], onDelete: Restrict)
+  createdById String @map("created_by_id")
+  createdBy   User   @relation("CreatedSubtasks", fields: [createdById], references: [id], onDelete: Restrict)
 
-  assignedToId String     @map("assigned_to_id")
-  assignedTo   User       @relation("AssignedSubtasks", fields: [assignedToId], references: [id], onDelete: Restrict)
+  assignedToId String @map("assigned_to_id")
+  assignedTo   User   @relation("AssignedSubtasks", fields: [assignedToId], references: [id], onDelete: Restrict)
 
-  assignedById String?    @map("assigned_by_id")
-  assignedBy   User?      @relation("AssignedBySubtasks", fields: [assignedById], references: [id], onDelete: SetNull)
+  assignedById String? @map("assigned_by_id")
+  assignedBy   User?   @relation("AssignedBySubtasks", fields: [assignedById], references: [id], onDelete: SetNull)
 
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@map("Subtask")
   @@index([createdById])
   @@index([assignedToId])
   @@index([taskId])
+  @@map("Subtask")
 }
-
 
 // --- NextAuth Required Adapter Models (No changes) ---
 model Account {
@@ -231,7 +230,7 @@ model Session {
   expires      DateTime
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@map("Session")
 }
 

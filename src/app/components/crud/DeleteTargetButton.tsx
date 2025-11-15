@@ -3,16 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+
 import { deleteUser } from "@/actions/admin/user.actions";
 import { deleteClient } from "@/actions/client.actions";
-import { deleteProject, deleteTask } from "@/actions/project.actions";
+import { deleteProject, deleteTask, deleteSubtask } from "@/actions/project.actions";
 import { MdiDeleteOutline } from "../Svgs/svgs";
-import { deleteSubtask } from "@/actions/subtask.actions";
 
 interface DeleteTargetButtonProps {
   targetId: string;
   target: "user" | "client" | "project" | "task" | "subtask";
-  parentId?: string; // ✅ For deleting tasks (projectId if available)
+  parentId?: string;
   className?: string;
 }
 
@@ -37,6 +37,7 @@ export default function DeleteTargetButton({
     setConfirmationText("");
   };
 
+  // ⭐⭐⭐ FIXED LOGIC HERE ⭐⭐⭐
   const handleConfirmDelete = async () => {
     if (normalizedConfirmation() !== "CONFIRM") {
       toast.error(`Type "CONFIRM" to proceed.`);
@@ -46,39 +47,43 @@ export default function DeleteTargetButton({
     setIsDeleting(true);
 
     try {
+      let res: any;
+
       if (target === "user") {
-        await deleteUser(targetId);
-        toast.success("User deleted successfully.");
+        res = await deleteUser(targetId);
       } else if (target === "client") {
-        await deleteClient(targetId);
-        toast.success("Client deleted successfully.");
+        res = await deleteClient(targetId);
       } else if (target === "project") {
-        await deleteProject(targetId);
-        toast.success("Project deleted successfully.");
+        res = await deleteProject(targetId);
       } else if (target === "task") {
-        // ✅ deleteTask(taskId, projectId)
-        await deleteTask(targetId, parentId ?? targetId);
-        toast.success("Task deleted successfully.");
+        res = await deleteTask(targetId, parentId ?? targetId);
       } else if (target === "subtask") {
-        await deleteSubtask(targetId);
-        toast.success("Subtask deleted successfully.");
-      }else {
-        console.error("Invalid delete target:", target);
-        toast.error("Developer error: Invalid target type.");
+        res = await deleteSubtask(targetId); // <-- returns {success, message}
+      } else {
+        toast.error("Unknown target type.");
         return;
       }
 
-      // Refresh UI after deletion
+      // ⭐⭐⭐ CHECK BACKEND RESPONSE ⭐⭐⭐
+      if (!res || res.success === false) {
+        toast.error(res?.message || "Permission denied.");
+        setIsDeleting(false);
+        return;
+      }
+
+      toast.success(res.message || "Deleted successfully.");
+
       router.refresh();
     } catch (error) {
       console.error("DELETE ERROR:", error);
-      toast.error("An unexpected error occurred while deleting.");
+      toast.error("Unexpected error while deleting.");
     } finally {
       setIsDeleting(false);
       closeModal();
     }
   };
 
+  // Modal behavior
   useEffect(() => {
     if (showConfirm) {
       inputRef.current?.focus();
@@ -87,22 +92,22 @@ export default function DeleteTargetButton({
 
       const handleKey = (e: KeyboardEvent) => {
         if (e.key === "Escape") closeModal();
-        if (e.key === "Enter" && normalizedConfirmation() === "CONFIRM")
+        if (e.key === "Enter" && normalizedConfirmation() === "CONFIRM") {
           void handleConfirmDelete();
+        }
       };
 
       window.addEventListener("keydown", handleKey);
+
       return () => {
         document.body.style.overflow = originalOverflow;
         window.removeEventListener("keydown", handleKey);
       };
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showConfirm]);
 
   return (
     <>
-      {/* Delete Button */}
       <button
         onClick={() => setShowConfirm(true)}
         disabled={isDeleting}
@@ -111,22 +116,19 @@ export default function DeleteTargetButton({
         <MdiDeleteOutline className="h-5" />
       </button>
 
-      {/* Confirmation Modal */}
       {showConfirm && (
         <div className="fixed inset-0 bg-red-900/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div
             ref={modalRef}
             className="bg-zGrey-2 p-6 rounded-xl shadow-xl w-full max-w-lg text-white overflow-hidden"
           >
-            <h3 className="text-xl md:text-2xl font-extrabold text-red-500 mb-4 text-center leading-snug break-words whitespace-normal">
+            <h3 className="text-xl md:text-2xl font-extrabold text-red-500 mb-4 text-center">
               CONFIRM PERMANENT DELETION !
             </h3>
 
-            <p className="mb-6 text-sm text-center leading-normal whitespace-normal ">
-              This action is <strong> IRREVERSIBLE</strong>. To confirm, please
-              type the word
-              <strong className="text-red-500"> &apos;CONFIRM&apos; </strong>
-              below.
+            <p className="mb-6 text-sm text-center">
+              This action is <strong>IRREVERSIBLE</strong>. Type
+              <strong className="text-red-500"> "CONFIRM" </strong> to proceed.
             </p>
 
             <input
@@ -134,29 +136,30 @@ export default function DeleteTargetButton({
               type="text"
               value={confirmationText}
               onChange={(e) => setConfirmationText(e.target.value)}
-              className="w-40 p-2 mb-4 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-center"
+              className="w-40 p-2 mb-4 border border-red-300 rounded-lg focus:ring-red-500 text-center"
               placeholder="Type CONFIRM"
               disabled={isDeleting}
             />
 
-            <div className="flex justify-end sm:justify-center gap-3 flex-wrap mt-auto">
+            <div className="flex justify-end gap-3">
               <button
                 onClick={closeModal}
                 disabled={isDeleting}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition text-sm sm:text-base"
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
               >
                 Cancel
               </button>
+
               <button
                 onClick={handleConfirmDelete}
                 disabled={isDeleting || normalizedConfirmation() !== "CONFIRM"}
-                className={`px-4 py-2 rounded-lg text-white transition ${
+                className={`px-4 py-2 rounded-lg text-white ${
                   isDeleting || normalizedConfirmation() !== "CONFIRM"
-                    ? "bg-red-600 opacity-50 cursor-not-allowed"
+                    ? "bg-red-600 opacity-50"
                     : "bg-red-600 hover:bg-red-700"
                 }`}
               >
-                {isDeleting ? 'Processing...' : 'Delete Permanently'}
+                {isDeleting ? "Processing..." : "Delete Permanently"}
               </button>
             </div>
           </div>
