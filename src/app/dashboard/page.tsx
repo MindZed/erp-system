@@ -260,7 +260,7 @@ export default async function DashboardPage() {
                     </h3>
                     <ul className="space-y-3 text-sm">
                         <li className="text-white">Meeting with link academy <span className="text-xs text-primaryRed block">FROM YOU, ADMIN</span></li>
-                        <li className="text-white">Go through new website designs <span className="text-xs text-active block">FROM JUNKAI, EMPLOYEE</span></li>
+                        <li className="text-white">Go through new website designs <span className="text-xs text-active block">FROM JUNAID, EMPLOYEE</span></li>
                         <li className="text-white">Domain purchase for Client <span className="text-xs text-yellow-500 block">FROM ARKA, MANAGER</span></li>
                     </ul>
                 </div>

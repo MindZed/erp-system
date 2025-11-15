@@ -1,4 +1,4 @@
-// mindzed/erp-system/erp-system-02abb7b4465004ac728e062c9a31c5e4ef5ac40a/prisma/schema.prisma
+// mindzed/erp-system/erp/prisma/schema.prisma
 
 // --- CONFIGURATION ---
 
@@ -38,6 +38,12 @@ model User {
   createdProjects Project[] @relation("CreatedProjects")
   assignedTasks   Task[]    @relation("AssignedTasks")
   createdTasks    Task[]    @relation("CreatedTasks")
+
+  // Subtask relations for tracking
+  createdSubtasks    Subtask[] @relation("CreatedSubtasks")
+  assignedSubtasks   Subtask[] @relation("AssignedSubtasks")
+  assignedBySubtasks Subtask[] @relation("AssignedBySubtasks")
+
 }
 
 enum UserRole {
@@ -150,6 +156,8 @@ model Task {
 
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  subtasks     Subtask[]  // relation to Subtask
+
 
   @@map("Task")
   @@index([assignedToId])
@@ -162,6 +170,38 @@ enum TaskStatus {
   COMPLETED
   ON_HOLD
 }
+
+model Subtask {
+  id          String      @id @default(cuid())
+  name        String      @db.VarChar(255)
+  description String?
+  startDate   DateTime?   @map("start_date") @db.Date
+  endDate     DateTime?   @map("end_date") @db.Date
+  status      TaskStatus  @default(PENDING)
+
+  // Relations
+  taskId      String      @map("task_id")
+  task        Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  // Tracking fields
+  createdById String      @map("created_by_id")
+  createdBy   User        @relation("CreatedSubtasks", fields: [createdById], references: [id], onDelete: Restrict)
+
+  assignedToId String     @map("assigned_to_id")
+  assignedTo   User       @relation("AssignedSubtasks", fields: [assignedToId], references: [id], onDelete: Restrict)
+
+  assignedById String?    @map("assigned_by_id")
+  assignedBy   User?      @relation("AssignedBySubtasks", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("Subtask")
+  @@index([createdById])
+  @@index([assignedToId])
+  @@index([taskId])
+}
+
 
 // --- NextAuth Required Adapter Models (No changes) ---
 model Account {

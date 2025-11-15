@@ -3,15 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-
 import { deleteUser } from "@/actions/admin/user.actions";
 import { deleteClient } from "@/actions/client.actions";
 import { deleteProject, deleteTask } from "@/actions/project.actions";
 import { MdiDeleteOutline } from "../Svgs/svgs";
+import { deleteSubtask } from "@/actions/subtask.actions";
 
 interface DeleteTargetButtonProps {
   targetId: string;
-  target: "user" | "client" | "project" | "task";
+  target: "user" | "client" | "project" | "task" | "subtask";
   parentId?: string; // ✅ For deleting tasks (projectId if available)
   className?: string;
 }
@@ -59,7 +59,10 @@ export default function DeleteTargetButton({
         // ✅ deleteTask(taskId, projectId)
         await deleteTask(targetId, parentId ?? targetId);
         toast.success("Task deleted successfully.");
-      } else {
+      } else if (target === "subtask") {
+        await deleteSubtask(targetId);
+        toast.success("Subtask deleted successfully.");
+      }else {
         console.error("Invalid delete target:", target);
         toast.error("Developer error: Invalid target type.");
         return;

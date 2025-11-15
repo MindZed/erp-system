@@ -9,7 +9,7 @@ import { AkarIconsEdit, BasilAdd } from "@/app/components/Svgs/svgs";
 
 // REMOVED external interface ClientListPageProps. Using 'props: any' for build compatibility.
 const ClientListPage = async (props: any) => {
-  
+
   // FIX: Explicitly use Promise.resolve and await on the searchParams object (from props)
   const { status, name, message, action } = await Promise.resolve(
     props.searchParams
@@ -26,6 +26,19 @@ const ClientListPage = async (props: any) => {
       createdAt: true,
     },
   });
+
+  // Priority order for sorting
+  const statusOrder = {
+    ACTIVE: 1,
+    ON_HOLD: 2,
+    INACTIVE: 3,
+  };
+
+  // Sort clients by status priority
+  const sortedClients = clients.sort(
+    (a, b) => statusOrder[a.status] - statusOrder[b.status]
+  );
+
 
   return (
     <div className="p-8 text-white bg-zBlack">
@@ -77,13 +90,12 @@ const ClientListPage = async (props: any) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        client.status === ClientStatus.ACTIVE
-                          ? "bg-green-400 text-green-900"
-                          : client.status === ClientStatus.ON_HOLD
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${client.status === ClientStatus.ACTIVE
+                        ? "bg-green-400 text-green-900"
+                        : client.status === ClientStatus.ON_HOLD
                           ? "bg-amber-500 text-orange-800"
                           : "bg-gray-400 text-gray-700"
-                      }`}
+                        }`}
                     >
                       {client.status}
                     </span>
