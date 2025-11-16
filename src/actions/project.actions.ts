@@ -272,7 +272,7 @@ export async function deleteProject(
 }
 
 // ====================================================
-// 4. TASK CRUD
+// 4. TASK CRUD (Admins + Managers only)
 // ====================================================
 
 export async function createTask(
@@ -281,39 +281,66 @@ export async function createTask(
   formData: FormData
 ): Promise<ActionState> {
   try {
-    const { currentUserId } = await getTaskFormInitData();
+    // 🔥 ADMIN + MANAGER ONLY
+    const session = await auth();
+    const role = (session?.user as any)?.role as UserRole;
+
+    if (!session?.user || (role !== UserRole.ADMIN && role !== UserRole.MANAGER)) {
+      return { message: "Error: Only Admin or Manager can create tasks." };
+    }
+
+    const currentUserId = session.user.id;
 
     const name = formData.get("name") as string;
-    const description = (formData.get("description") as string) || "";
-    const assignedToId = (formData.get("assignedToId") as string) || "";
-    const startDate = formData.get("startDate") as string;
-    const endDate = formData.get("endDate") as string;
+    const description = cleanString(formData.get("description"));
+    const startDate = cleanString(formData.get("startDate"));
+    const endDate = cleanString(formData.get("endDate"));
+
+    // ⭐ Multi-user assignment
+    const assignedUserIds = formData.getAll("assignedUserIds") as string[];
 
     if (!name) {
       return { message: "Error: Task Name is required." };
     }
 
-    await prisma.task.create({
+    // STEP 1: create task
+    const task = await prisma.task.create({
       data: {
         name: name.trim(),
-        description: cleanString(description),
+        description,
         projectId,
-        assignedToId: cleanString(assignedToId),
         createdById: currentUserId,
-        startDate: cleanString(startDate) ? new Date(startDate) : null,
-        endDate: cleanString(endDate) ? new Date(endDate) : null,
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
         status: TaskStatus.PENDING,
         statusReason: null,
       },
     });
 
+    // STEP 2: create task members
+    if (assignedUserIds.length > 0) {
+      await prisma.taskMember.createMany({
+        data: assignedUserIds.map((uid) => ({
+          taskId: task.id,
+          userId: uid,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
     revalidatePath(`/dashboard/projects/${projectId}`);
     return { message: `Task "${name}" created successfully!` };
+
   } catch (error) {
     console.error("CREATE_TASK_ERROR", error);
     return { message: "Error creating task." };
   }
 }
+
+
+// ====================================================
+// UPDATE TASK (Admins + Managers only)
+// ====================================================
 
 export async function updateTask(
   taskId: string,
@@ -322,47 +349,83 @@ export async function updateTask(
   formData: FormData
 ): Promise<ActionState> {
   try {
-    await checkAuth();
+    // 🔥 ADMIN + MANAGER ONLY
+    const session = await auth();
+    const role = (session?.user as any)?.role as UserRole;
+
+    if (!session?.user || (role !== UserRole.ADMIN && role !== UserRole.MANAGER)) {
+      return { message: "Error: Only Admin or Manager can update tasks." };
+    }
 
     const name = formData.get("name") as string;
-    const description = (formData.get("description") as string) || "";
-    const assignedToId = (formData.get("assignedToId") as string) || "";
+    const description = cleanString(formData.get("description"));
     const status = formData.get("status") as TaskStatus;
-    const statusReason = (formData.get("statusReason") as string) || "";
-    const startDate = formData.get("startDate") as string;
-    const endDate = formData.get("endDate") as string;
+    const statusReason = cleanString(formData.get("statusReason"));
+    const startDate = cleanString(formData.get("startDate"));
+    const endDate = cleanString(formData.get("endDate"));
+
+    // ⭐ Multi-user assignment
+    const assignedUserIds = formData.getAll("assignedUserIds") as string[];
 
     if (!name || !status) {
       return { message: "Error: Missing required fields." };
     }
 
+    // STEP 1: update base task fields
     await prisma.task.update({
       where: { id: taskId },
       data: {
         name: name.trim(),
-        description: cleanString(description),
-        assignedToId: cleanString(assignedToId),
-        startDate: cleanString(startDate) ? new Date(startDate) : null,
-        endDate: cleanString(endDate) ? new Date(endDate) : null,
+        description,
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
         status,
-        statusReason: cleanString(statusReason),
+        statusReason,
       },
     });
 
+    // STEP 2: reset task members
+    await prisma.taskMember.deleteMany({
+      where: { taskId },
+    });
+
+    // STEP 3: create new task members
+    if (assignedUserIds.length > 0) {
+      await prisma.taskMember.createMany({
+        data: assignedUserIds.map((uid) => ({
+          taskId,
+          userId: uid,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
     revalidatePath(`/dashboard/projects/${projectId}`);
     return { message: `Task "${name}" updated successfully!` };
+
   } catch (error) {
     console.error("UPDATE_TASK_ERROR", error);
     return { message: "Error updating task." };
   }
 }
 
+
+// ====================================================
+// DELETE TASK (Admins + Managers only)
+// ====================================================
+
 export async function deleteTask(
   taskId: string,
   projectId: string
 ): Promise<DeleteActionResult> {
   try {
-    await checkAuth();
+    // 🔥 ADMIN + MANAGER ONLY
+    const session = await auth();
+    const role = (session?.user as any)?.role as UserRole;
+
+    if (!session?.user || (role !== UserRole.ADMIN && role !== UserRole.MANAGER)) {
+      return { success: false, message: "Error: Only Admin or Manager can delete tasks." };
+    }
 
     const task = await prisma.task.findUnique({
       where: { id: taskId },
@@ -370,17 +433,20 @@ export async function deleteTask(
     });
 
     await prisma.task.delete({ where: { id: taskId } });
+
     revalidatePath(`/dashboard/projects/${projectId}`);
 
     return {
       success: true,
       message: `Task "${task?.name}" deleted successfully.`,
     };
+
   } catch (error) {
     console.error("DELETE_TASK_ERROR", error);
     return { success: false, message: "Error deleting task." };
   }
 }
+
 
 
 // ====================================================
@@ -414,53 +480,52 @@ export async function createSubtask(
 
   const taskId = formData.get("taskId") as string;
   const name = formData.get("name") as string;
-  const descriptionRaw = formData.get("description");
-  const assignedToIdRaw = formData.get("assignedToId"); // Required field
+  const assignedToId = cleanString(formData.get("assignedToId"));
+  const description = cleanString(formData.get("description"));
   const endDateRaw = formData.get("endDate");
-  const assignedByIdRaw = formData.get("assignedById"); // Optional field
-
-  // Process fields
-  const assignedToId = cleanString(assignedToIdRaw);
-  const description = cleanString(descriptionRaw);
-  const assignedById = cleanString(assignedByIdRaw);
   const endDate = cleanString(endDateRaw) ? new Date(cleanString(endDateRaw)!) : null;
 
-
   if (!taskId || !name || !assignedToId) {
-    return { message: "Error: Missing required fields (Task ID, Name, Assigned To)." };
+    return { message: "Error: Missing required fields." };
   }
 
-  try {
-    await prisma.subtask.create({
-      data: {
-        taskId,
-        name: name.trim(),
-        description,
-        endDate,
-        status: TaskStatus.PENDING,
-        createdById: user.id,
-        assignedToId,
-        assignedById,
-      },
-    });
+  // ⭐ Fetch parent task members
+  const parentTask = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { projectId: true, members: { select: { userId: true } } },
+  });
 
-    // Revalidate the parent project page
-    const parentTask = await prisma.task.findUnique({
-      where: { id: taskId },
-      select: { projectId: true },
-    });
-    if (parentTask) {
-      revalidatePath(`/dashboard/projects/${parentTask.projectId}`);
-    } else {
-      revalidatePath("/dashboard/projects");
-    }
+  if (!parentTask) return { message: "Error: Parent task not found." };
 
-    return { message: "Success: Subtask created." };
-  } catch (err) {
-    console.error("CREATE_SUBTASK_ERROR", err);
-    return { message: "Error: Could not create subtask." };
+  const isMember = parentTask.members.some((m) => m.userId === assignedToId);
+
+  // EMPLOYEE rule
+  if (user.role === UserRole.EMPLOYEE && assignedToId !== user.id) {
+    return { message: "Error: Employees can only assign subtasks to themselves." };
   }
+
+  // MANAGER rule
+  if (user.role === UserRole.MANAGER && !isMember) {
+    return { message: "Error: Selected user is not a member of this task." };
+  }
+
+  await prisma.subtask.create({
+    data: {
+      taskId,
+      name: name.trim(),
+      description,
+      endDate,
+      status: TaskStatus.PENDING,
+      createdById: user.id,
+      assignedToId,
+      assignedById: user.id,
+    },
+  });
+
+  revalidatePath(`/dashboard/projects/${parentTask.projectId}`);
+  return { message: "Success: Subtask created." };
 }
+
 // ====================================================
 // UPDATE SUBTASK (FULL VERSION)
 // ====================================================
@@ -482,87 +547,76 @@ export async function updateSubtask(
 
   const name = formData.get("name") as string;
   const status = formData.get("status") as TaskStatus;
-
-  // Raw fields
-  const descriptionRaw = formData.get("description");
-  const assignedToIdRaw = formData.get("assignedToId");
-  const statusReasonRaw = formData.get("statusReason");
+  const assignedToId = cleanString(formData.get("assignedToId"));
+  const description = cleanString(formData.get("description"));
+  const statusReason = cleanString(formData.get("statusReason"));
   const endDateRaw = formData.get("endDate");
-  const assignedByIdRaw = formData.get("assignedById");
-
-  // Clean fields
-  const description = cleanString(descriptionRaw);
-  const assignedToId = cleanString(assignedToIdRaw);
-  const statusReason = cleanString(statusReasonRaw);
-  const assignedById = cleanString(assignedByIdRaw);
-  const endDate = cleanString(endDateRaw)
-    ? new Date(cleanString(endDateRaw)!)
-    : null;
+  const endDate = cleanString(endDateRaw) ? new Date(cleanString(endDateRaw)!) : null;
 
   if (!subtaskId || !name || !status || !assignedToId) {
     return { message: "Error: Missing required fields." };
   }
 
-  try {
-    const existing = await prisma.subtask.findUnique({
-      where: { id: subtaskId },
-      select: {
-        assignedToId: true,
-        createdById: true,
-        taskId: true,
-      },
-    });
+  const existing = await prisma.subtask.findUnique({
+    where: { id: subtaskId },
+    select: {
+      createdById: true,
+      assignedToId: true,
+      taskId: true,
+    },
+  });
 
-    if (!existing) {
-      return { message: "Error: Subtask not found." };
-    }
+  if (!existing) return { message: "Error: Subtask not found." };
 
-    const isAdmin = user.role === UserRole.ADMIN;
-    const isManager = user.role === UserRole.MANAGER;
-    const isEmployee = user.role === UserRole.EMPLOYEE;
-    const isCreator = existing.createdById === user.id;
+  // ⭐ Fetch members of parent task
+  const parentTask = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { members: { select: { userId: true } } },
+  });
 
-    // 🔥 **RBAC RULES**
-    // Admin + Manager -> Full Access
-    // Employee -> Can ONLY edit their own subtasks
-    if (isEmployee && !isCreator) {
-      return { message: "Error: You can edit only subtasks you created." };
-    }
+  const isMember = parentTask?.members.some((m) => m.userId === assignedToId);
 
-    const updateData: any = {
-      status,
-      description,
-      endDate,
-      statusReason: statusReason ?? null,
-    };
+  const isAdmin = user.role === UserRole.ADMIN;
+  const isManager = user.role === UserRole.MANAGER;
+  const isEmployee = user.role === UserRole.EMPLOYEE;
 
-    // Admin/Manager/Creator can edit name + assignedTo
-    if (isAdmin || isManager || isCreator) {
-      updateData.name = name.trim();
-      updateData.assignedToId = assignedToId;
-    }
+  const isCreator = existing.createdById === user.id;
+  const isAssignee = existing.assignedToId === user.id;
 
-    // Only Admin/Manager can change assignedBy
-    if (isAdmin || isManager) {
-      updateData.assignedById = assignedById;
-    }
-
-    await prisma.subtask.update({
-      where: { id: subtaskId },
-      data: updateData,
-    });
-
-    revalidatePath(`/dashboard/projects/${projectId}`);
-    return { message: "Success: Subtask updated." };
-  } catch (err) {
-    console.error("UPDATE_SUBTASK_ERROR", err);
-    return { message: "Error: Could not update subtask." };
+  // ⭐ EMPLOYEE RULE
+  if (isEmployee && !(isCreator || isAssignee)) {
+    return { message: "Error: Employees can edit only their own subtasks." };
   }
+
+  // ⭐ MANAGER RULE — assignedTo must be task member
+  if (isManager && !isMember) {
+    return { message: "Error: Selected user is not a member of this task." };
+  }
+
+  // ⭐ Build update payload
+  const updateData: any = {
+    status,
+    description,
+    endDate,
+    statusReason,
+  };
+
+  if (isAdmin || isManager || isCreator) {
+    updateData.name = name.trim();
+    updateData.assignedToId = assignedToId;
+    updateData.assignedById = user.id;
+  }
+
+  await prisma.subtask.update({ where: { id: subtaskId }, data: updateData });
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  return { message: "Success: Subtask updated." };
 }
 
 
+
 // ====================================================
-// DELETE SUBTASK (FULL VERSION)
+// DELETE SUBTASK (FIXED VERSION WITH FULL RBAC)
 // ====================================================
 export async function deleteSubtask(subtaskId: string): Promise<DeleteResult> {
   let user;
@@ -582,6 +636,7 @@ export async function deleteSubtask(subtaskId: string): Promise<DeleteResult> {
       where: { id: subtaskId },
       select: {
         createdById: true,
+        assignedToId: true,
         taskId: true,
         name: true,
       },
@@ -591,26 +646,34 @@ export async function deleteSubtask(subtaskId: string): Promise<DeleteResult> {
       return { success: false, message: "Error: Subtask not found." };
     }
 
+    // role checks
     const isAdmin = user.role === UserRole.ADMIN;
     const isManager = user.role === UserRole.MANAGER;
     const isCreator = existing.createdById === user.id;
+    const isAssignedToUser = existing.assignedToId === user.id;
 
-    // 🚫 Employee can only delete THEIR OWN subtasks
-    if (!isAdmin && !isManager && !isCreator) {
+    // ⭐ FINAL RBAC POLICY:
+    //  - Admin: can delete any
+    //  - Manager: can delete any subtask under their task
+    //  - Employee: can delete only if creator OR assigned user
+    if (!isAdmin && !isManager && !(isCreator || isAssignedToUser)) {
       return {
         success: false,
-        message: "Error: You can delete only subtasks you created.",
+        message: "Error: You can delete a subtask only if you created it or it is assigned to you.",
       };
     }
 
     await prisma.subtask.delete({ where: { id: subtaskId } });
 
+    // revalidate parent project
     const parentTask = await prisma.task.findUnique({
       where: { id: existing.taskId },
       select: { projectId: true },
     });
 
-    if (parentTask) revalidatePath(`/dashboard/projects/${parentTask.projectId}`);
+    if (parentTask) {
+      revalidatePath(`/dashboard/projects/${parentTask.projectId}`);
+    }
 
     return {
       success: true,

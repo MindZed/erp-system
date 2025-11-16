@@ -1,10 +1,10 @@
 // src/app/dashboard/projects/[projectId]/new/page.tsx
 
 import prisma from "@/lib/prisma";
-import { getTaskFormInitData } from "@/actions/project.actions";
 import TaskForm from "../components/TaskForm";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { auth } from "@/auth";
 import { UserRole } from "@prisma/client";
 
 export const metadata = {
@@ -16,28 +16,51 @@ export default async function NewTaskPage(props: any) {
   const params = await Promise.resolve(props.params);
   const { projectId } = params;
 
-  let project, filteredAssignees, currentUserId;
+  // --------------------------
+  // AUTH CHECK
+  // --------------------------
+  const session = await auth();
+  const userRole = (session?.user as any)?.role as UserRole;
 
-  try {
-    const projectData = await prisma.project.findUnique({
-      where: { id: projectId },
-      select: { id: true, name: true },
-    });
-
-    if (!projectData) redirect("/dashboard/projects");
-    project = projectData;
-
-    const initData = await getTaskFormInitData();
-    currentUserId = initData.currentUserId;
-
-    filteredAssignees = initData.assignableUsers.filter(
-      (u: any) => u.role === UserRole.MANAGER || u.role === UserRole.EMPLOYEE
-    );
-  } catch (error) {
-    console.error("NEW_TASK_PAGE_ERROR", error);
-    redirect(`/dashboard/projects`);
+  if (
+    !session?.user ||
+    (userRole !== UserRole.ADMIN && userRole !== UserRole.MANAGER)
+  ) {
+    redirect(`/dashboard/projects/${projectId}`);
   }
 
+  // --------------------------
+  // FETCH PROJECT
+  // --------------------------
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { id: true, name: true },
+  });
+
+  if (!project) redirect("/dashboard/projects");
+
+  // --------------------------
+  // FETCH ASSIGNABLE USERS (Manager + Employee)
+  // --------------------------
+  const users = await prisma.user.findMany({
+    where: {
+      role: { in: [UserRole.MANAGER, UserRole.EMPLOYEE] },
+    },
+    select: { id: true, name: true, role: true },
+    orderBy: { name: "asc" },
+  });
+
+  const filteredAssignees = users.map((u) => ({
+    id: u.id,
+    name: u.name ?? "Unnamed User",
+    role: u.role,
+  }));
+
+  const currentUserId = session.user.id;
+
+  // --------------------------
+  // JSX
+  // --------------------------
   return (
     <div className="p-8 bg-zBlack min-h-screen text-white">
 
@@ -55,16 +78,14 @@ export default async function NewTaskPage(props: any) {
         </Link>
       </div>
 
-      {/* Center the form container */}
+      {/* Centered Form Wrapper */}
       <div className="flex justify-center">
         <div className="bg-zGrey-1 w-full max-w-3xl p-8 rounded-2xl shadow-xl border border-zGrey-2">
 
-          {/* Section title */}
           <h2 className="text-2xl font-bold mb-6 text-primaryRed">
             New Task
           </h2>
 
-          {/* TaskForm (client component) */}
           <TaskForm
             projectId={project.id}
             projectName={project.name}

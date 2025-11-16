@@ -23,8 +23,6 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
   const resolvedSearchParams = await Promise.resolve(searchParams);
   const { status, name, message, action } = resolvedSearchParams || {};
 
-
-
   if (!projectId || typeof projectId !== "string") redirect("/dashboard/projects");
 
   const session = await auth();
@@ -35,9 +33,8 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
 
   // RBAC GROUPS
   const isManagerOrAdmin = userRole === UserRole.ADMIN || userRole === UserRole.MANAGER;
-  const isManagerOrEmployee = userRole === UserRole.MANAGER || userRole === UserRole.EMPLOYEE;
 
-  // Helpers
+  // Format helper
   const formatEnum = (value: string) =>
     value
       .split("_")
@@ -95,7 +92,16 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
           startDate: true,
           endDate: true,
           updatedAt: true,
-          assignedTo: { select: { id: true, name: true } },
+
+          // ⭐ NEW — Multi-member system
+          members: {
+            select: {
+              user: {
+                select: { id: true, name: true },
+              },
+            },
+          },
+
           createdBy: { select: { id: true, name: true } },
 
           subtasks: {
@@ -108,9 +114,12 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
               endDate: true,
               updatedAt: true,
               assignedTo: { select: { id: true, name: true } },
-              createdBy: { select: { name: true } },
+
+              // ⭐ FIXED: include creator ID
+              createdBy: { select: { id: true, name: true } },
             },
           },
+
         },
       },
     },
@@ -127,14 +136,12 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
     );
   }
 
-  const isProjectManager = project.manager?.id === userId;
-
   // Employee sees only their tasks or subtasks
   const employeeTasks =
     userRole === UserRole.EMPLOYEE
       ? project.tasks.filter(
         (task: any) =>
-          task.assignedTo?.id === userId ||
+          task.members.some((m: any) => m.user.id === userId) ||
           task.subtasks.some((st: any) => st.assignedTo?.id === userId)
       )
       : project.tasks;
@@ -148,7 +155,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
         ← Back to Projects List
       </Link>
 
-      {/* PROJECT HEADER — RESTORED UI */}
+      {/* PROJECT HEADER */}
       <div className="mb-6 bg-zGrey-1 p-6 rounded-lg shadow">
         <div className="flex justify-between items-start">
           <h1 className="text-3xl font-bold uppercase text-white">{project.name}</h1>
@@ -173,7 +180,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
           </p>
           <p><strong>Created By:</strong> {project.createdBy?.name}</p>
           <p><strong>Start Date:</strong> {project.startDate ? new Date(project.startDate).toLocaleDateString() : "N/A"}</p>
-          <p><strong>End Date / Deadline:</strong> {project.endDate ? new Date(project.endDate).toLocaleDateString() : "N/A"}</p>
+          <p><strong>End Date:</strong> {project.endDate ? new Date(project.endDate).toLocaleDateString() : "N/A"}</p>
 
           <div className="col-span-2 md:col-span-1">
             <strong>Progress:</strong>
@@ -242,14 +249,17 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
               {displayedTasks.map((task: any) => (
                 <TaskRowClient
                   key={task.id}
-                  task={task}
+                  task={{
+                    ...task,
+                    assignedUsers: task.members.map((m: any) => m.user),
+                  }}
                   projectId={project.id}
                   userId={userId}
+                  userRole={userRole}
                   isManagerOrAdmin={isManagerOrAdmin}
                   taskStatusStyles={taskStatusStyles}
                 />
               ))}
-
             </tbody>
           </table>
         )}

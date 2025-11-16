@@ -24,17 +24,36 @@ export default async function ProjectListPage(props: any) {
     userRole === UserRole.ADMIN || userRole === UserRole.MANAGER;
 
   // --- RBAC FILTERS ---
-  let whereClause = {};
+  let whereClause: any = {};
 
   if (userRole === UserRole.EMPLOYEE) {
     whereClause = {
-      tasks: { some: { assignedToId: userId } },
+      tasks: {
+        some: {
+          members: {
+            some: { userId: userId },
+          },
+        },
+      },
     };
-  } else if (userRole === UserRole.MANAGER) {
+  }
+
+  if (userRole === UserRole.MANAGER) {
     whereClause = {
       OR: [
+        // Projects managed by manager
         { managerId: userId },
-        { tasks: { some: { assignedToId: userId } } },
+
+        // Projects where manager is a task member
+        {
+          tasks: {
+            some: {
+              members: {
+                some: { userId: userId },
+              },
+            },
+          },
+        },
       ],
     };
   }
@@ -57,14 +76,12 @@ export default async function ProjectListPage(props: any) {
     },
   });
 
-  // Helper to format enums nicely
   const formatEnum = (value: string) =>
     value
       .split("_")
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
       .join(" ");
 
-  // Status styling
   const statusStyles: Record<ProjectStatus, string> = {
     PENDING: "bg-gray-400 text-gray-700",
     ACTIVE: "bg-blue-400 text-blue-900",
@@ -131,7 +148,6 @@ export default async function ProjectListPage(props: any) {
                   key={project.id}
                   className="hover:bg-zGrey-2/50 transition duration-150"
                 >
-                  {/* CLICKABLE PROJECT NAME (RED ON HOVER) */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">
                     <Link
                       href={`/dashboard/projects/${project.id}`}
@@ -151,9 +167,7 @@ export default async function ProjectListPage(props: any) {
 
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        statusStyles[project.status]
-                      }`}
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusStyles[project.status]}`}
                     >
                       {formatEnum(project.status)}
                     </span>
@@ -161,15 +175,12 @@ export default async function ProjectListPage(props: any) {
 
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        priorityStyles[project.priority]
-                      }`}
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${priorityStyles[project.priority]}`}
                     >
                       {project.priority}
                     </span>
                   </td>
 
-                  {/* PROGRESS BAR */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                     <div className="w-16 mx-auto bg-gray-700 rounded-full h-2.5">
                       <div
@@ -192,7 +203,6 @@ export default async function ProjectListPage(props: any) {
                       : "N/A"}
                   </td>
 
-                  {/* ACTIONS (Edit/Delete for admin/manager) */}
                   <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                     <div className="flex justify-center items-center space-x-2">
                       {isManagerOrAdmin && (

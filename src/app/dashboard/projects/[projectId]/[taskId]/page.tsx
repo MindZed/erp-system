@@ -6,8 +6,8 @@ import { UserRole, TaskStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import DeleteTargetButton from "@/app/components/crud/DeleteTargetButton";
-import SubtaskForm from "./components/SubtaskForm"; // FIXED
-import { AkarIconsEdit, BasilAdd } from "@/app/components/Svgs/svgs";
+import SubtaskForm from "./components/SubtaskForm";
+import { AkarIconsEdit } from "@/app/components/Svgs/svgs";
 
 const formatEnum = (value: string) =>
   value
@@ -23,7 +23,9 @@ const taskStatusStyles: Record<string, string> = {
 };
 
 export default async function TaskDetailPage({ params }: any) {
-  const { projectId, taskId } = params;
+  const resolvedParams = await Promise.resolve(params);
+  const { projectId, taskId } = resolvedParams;
+
 
   const session = await auth();
   if (!session?.user) redirect("/login");
@@ -31,7 +33,7 @@ export default async function TaskDetailPage({ params }: any) {
   const userRole = (session.user as any).role as UserRole;
   const userId = session.user.id;
 
-  // Fetch task + subtasks
+  // ⭐ FETCH TASK (multi-members included)
   const task = await prisma.task.findUnique({
     where: { id: taskId },
     select: {
@@ -41,9 +43,17 @@ export default async function TaskDetailPage({ params }: any) {
       status: true,
       startDate: true,
       endDate: true,
+      projectId: true,
       project: { select: { id: true, name: true } },
-      assignedTo: { select: { id: true, name: true } },
-      createdBy: { select: { name: true } },
+
+      members: {
+        select: {
+          user: { select: { id: true, name: true, role: true } },
+        },
+      },
+
+      createdBy: { select: { id: true, name: true } },
+
       subtasks: {
         orderBy: { createdAt: "asc" },
         select: {
@@ -54,20 +64,23 @@ export default async function TaskDetailPage({ params }: any) {
           endDate: true,
           updatedAt: true,
           assignedTo: { select: { id: true, name: true } },
-          createdBy: { select: { name: true } },
+
+          // ⭐ FIXED
+          createdBy: { select: { id: true, name: true } },
           assignedBy: { select: { name: true } },
         },
       },
     },
   });
 
-  if (!task) return redirect(`/dashboard/projects/${projectId}`);
+  if (!task) redirect(`/dashboard/projects/${projectId}`);
 
-  // rbac: manager / admin / assigned user only
+  // ⭐ RBAC RULES
   const isManagerOrAdmin = userRole === UserRole.ADMIN || userRole === UserRole.MANAGER;
-  const isAssignedToTask = task.assignedTo?.id === userId;
+  const isMember = task.members.some((m) => m.user.id === userId);
 
-  if (!isManagerOrAdmin && !isAssignedToTask) {
+  // Employee can only open tasks assigned to them
+  if (userRole === UserRole.EMPLOYEE && !isMember) {
     return (
       <div className="p-6 text-red-500">
         Access Denied
@@ -78,17 +91,8 @@ export default async function TaskDetailPage({ params }: any) {
     );
   }
 
-  // fetch users for form
-  // fetch users for form (NEEDS ROLE FIELD)
-  const users = await prisma.user.findMany({
-    select: {
-      id: true,
-      name: true,
-      role: true,     // <-- REQUIRED FIX
-    },
-    orderBy: { name: "asc" },
-  });
-
+  // ⭐ Valid assignees = ONLY users assigned to this task
+  const users = task.members.map((m) => m.user);
 
   return (
     <div className="p-8 bg-zBlack min-h-screen text-white">
@@ -102,6 +106,7 @@ export default async function TaskDetailPage({ params }: any) {
       <div className="bg-zGrey-1 p-6 rounded-lg shadow mt-4">
         <div className="flex justify-between">
           <h1 className="text-3xl font-bold">{task.name}</h1>
+
           <span className={`px-3 py-1 text-sm rounded-full ${taskStatusStyles[task.status]}`}>
             {formatEnum(task.status)}
           </span>
@@ -110,26 +115,33 @@ export default async function TaskDetailPage({ params }: any) {
         <p className="text-zGrey-3 mt-2">{task.description}</p>
 
         <div className="grid grid-cols-3 mt-4 text-sm text-zGrey-3 border-t border-zGrey-2 pt-4">
-          <div><strong>Assigned To:</strong> {task.assignedTo?.name || "Unassigned"}</div>
+          <div>
+            <strong>Assigned To:</strong>{" "}
+            {task.members.map((m) => m.user.name).join(", ") || "Unassigned"}
+          </div>
           <div><strong>Created By:</strong> {task.createdBy?.name}</div>
-          <div><strong>Deadline:</strong> {task.endDate?.toLocaleDateString() || "N/A"}</div>
+          <div>
+            <strong>Deadline:</strong>{" "}
+            {task.endDate ? new Date(task.endDate).toLocaleDateString() : "N/A"}
+          </div>
         </div>
       </div>
 
       {/* Subtask Form */}
-      <div className="max-w-xl mx-auto my-6">
-        {(userRole === UserRole.MANAGER || userRole === UserRole.EMPLOYEE) && (
+      {(userRole === UserRole.MANAGER || userRole === UserRole.EMPLOYEE) && (
+        <div className="max-w-xl mx-auto my-6">
           <SubtaskForm
             taskId={taskId}
             projectId={projectId}
             taskName={task.name}
             assignees={users}
             currentUserId={userId}
+            currentUserRole={userRole}
           />
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Subtask table */}
+      {/* Subtasks Table */}
       <h2 className="text-2xl font-bold mt-10">Subtasks ({task.subtasks.length})</h2>
 
       <table className="min-w-full bg-zGrey-1 mt-4 rounded-lg overflow-hidden">
@@ -143,16 +155,20 @@ export default async function TaskDetailPage({ params }: any) {
           </tr>
         </thead>
         <tbody>
-          {task.subtasks.map((st) => (
+          {task.subtasks.map((st: any) => (
             <tr key={st.id} className="border-t border-zGrey-2">
               <td className="p-3">{st.name}</td>
-              <td className="p-3">{st.assignedTo?.name}</td>
+
+              <td className="p-3">{st.assignedTo?.name || "N/A"}</td>
+
               <td className="p-3">
                 <span className={`px-2 py-1 text-xs rounded-full ${taskStatusStyles[st.status]}`}>
                   {formatEnum(st.status)}
                 </span>
               </td>
+
               <td className="p-3">{new Date(st.updatedAt).toLocaleDateString()}</td>
+
               <td className="p-3 text-center flex justify-center gap-2">
                 <Link
                   href={`/dashboard/projects/${projectId}/${taskId}/${st.id}/edit`}

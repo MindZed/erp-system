@@ -1,91 +1,84 @@
 // src/app/dashboard/projects/[projectId]/[taskId]/[subtaskId]/edit/page.tsx
 
 import prisma from "@/lib/prisma";
-import { getTaskFormInitData } from "@/actions/project.actions";
 import SubtaskForm from "../../components/SubtaskForm";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { TaskStatus, UserRole } from "@prisma/client";
+import { auth } from "@/auth";
 
 export const metadata = {
   title: "Edit Subtask | MindZed ERP",
   description: "Edit an existing subtask.",
 };
 
-interface SubtaskFetchData {
-  id: string;
-  name: string;
-  description: string | null;
-  assignedToId: string;
-  startDate: Date | null;
-  endDate: Date | null;
-  status: TaskStatus;
-  createdById: string;
-  assignedById?: string | null;
-}
+export default async function EditSubtaskPage({ params }: any) {
+  const resolved = await Promise.resolve(params);
+  const { projectId, taskId, subtaskId } = resolved;
 
-export default async function EditSubtaskPage(props: any) {
-  const params = await Promise.resolve(props.params);
-  const { projectId, taskId, subtaskId } = params;
 
-  let taskName: string,
-    filteredAssignees: any[],
-    currentUserId: string,
-    subtask: SubtaskFetchData | null;
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+  const currentUserId = session.user.id;
+  const currentUserRole = (session.user as any).role as UserRole;
 
-  try {
-    const [subtaskData, initData, parentTask] = await Promise.all([
-      prisma.subtask.findUnique({
-        where: { id: subtaskId },
+  // ⭐ Fetch subtask
+  const subtask = await prisma.subtask.findUnique({
+    where: { id: subtaskId },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      assignedToId: true,
+      endDate: true,
+      status: true,
+      statusReason: true,
+
+      createdById: true,   // ⭐ employee-only check depends on this
+      assignedById: true,
+      taskId: true,
+    },
+  });
+
+
+  if (!subtask) redirect(`/dashboard/projects/${projectId}`);
+
+  // ⭐ Fetch parent task WITH MEMBERS
+  const parentTask = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: {
+      id: true,
+      name: true,
+      projectId: true,
+      members: {
         select: {
-          id: true,
-          name: true,
-          description: true,
-          assignedToId: true,
-          startDate: true,
-          endDate: true,
-          status: true,
-          createdById: true,
-          assignedById: true,
+          user: {
+            select: { id: true, name: true, role: true },
+          },
         },
-      }),
+      },
+    },
+  });
 
-      getTaskFormInitData(),
-
-      prisma.task.findUnique({
-        where: { id: taskId },
-        select: { name: true, projectId: true },
-      }),
-    ]);
-
-    if (!subtaskData || !parentTask || parentTask.projectId !== projectId) {
-      redirect(`/dashboard/projects/${projectId}/${taskId}`);
-    }
-
-    subtask = subtaskData;
-    taskName = parentTask.name;
-    currentUserId = initData.currentUserId;
-
-    filteredAssignees = initData.assignableUsers.filter(
-      (user: any) =>
-        user.role === UserRole.MANAGER || user.role === UserRole.EMPLOYEE
-    );
-  } catch (error) {
-    console.error("EDIT_SUBTASK_PAGE_ERROR", error);
-    redirect(`/dashboard/projects/${projectId}/${taskId}`);
+  if (!parentTask || parentTask.projectId !== projectId) {
+    redirect(`/dashboard/projects/${projectId}`);
   }
 
-  if (!subtask) redirect(`/dashboard/projects/${projectId}/${taskId}`);
+  const taskName = parentTask.name;
+
+  // ⭐ Valid assignees = ONLY task members
+  const filteredAssignees = parentTask.members.map((m) => m.user);
 
   const initialSubtask = {
-    ...subtask,
-    startDate: subtask.startDate
-      ? subtask.startDate.toISOString().split("T")[0]
-      : null,
-    endDate: subtask.endDate
-      ? subtask.endDate.toISOString().split("T")[0]
-      : null,
-    statusReason: null,
+    id: subtask.id,
+    name: subtask.name,
+    description: subtask.description,
+    assignedToId: subtask.assignedToId,
+    endDate: subtask.endDate ? subtask.endDate.toISOString().split("T")[0] : null,
+    status: subtask.status,
+    statusReason: subtask.statusReason || null,
+    createdById: subtask.createdById,
+    assignedById: subtask.assignedById,
   };
 
   return (
@@ -110,6 +103,7 @@ export default async function EditSubtaskPage(props: any) {
         taskName={taskName}
         assignees={filteredAssignees}
         currentUserId={currentUserId}
+        currentUserRole={currentUserRole}
         initialSubtask={initialSubtask}
       />
     </div>

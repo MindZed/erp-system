@@ -1,5 +1,6 @@
 "use client";
 
+import { UserRole } from "@prisma/client";
 import { useActionState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { createSubtask, updateSubtask } from "@/actions/project.actions";
@@ -10,18 +11,19 @@ interface SubtaskFormProps {
   taskId: string;
   projectId: string;
   taskName: string;
-  assignees: { id: string; name: string | null; role: string }[];
+  assignees: { id: string; name: string | null; role: UserRole }[];
   currentUserId: string;
+  currentUserRole: UserRole;
   initialSubtask?: {
     id: string;
     name: string;
-    description: string | null | undefined;
+    description: string | null;
     assignedToId: string;
-    endDate: string | null | undefined;
+    endDate: string | null;
     status: TaskStatus;
-    statusReason: string | null | undefined;
+    statusReason: string | null;
     createdById: string;
-    assignedById?: string | null | undefined;
+    assignedById?: string | null;
   };
 }
 
@@ -33,6 +35,7 @@ export default function SubtaskForm({
   taskName,
   assignees = [],
   currentUserId,
+  currentUserRole,
   initialSubtask,
 }: SubtaskFormProps) {
   const isEdit = !!initialSubtask;
@@ -42,8 +45,9 @@ export default function SubtaskForm({
 
   useEffect(() => {
     if (state.message) {
-      if (state.message.startsWith("Error")) toast.error(state.message);
-      else toast.success(state.message);
+      state.message.startsWith("Error")
+        ? toast.error(state.message)
+        : toast.success(state.message);
     }
   }, [state.message]);
 
@@ -55,45 +59,57 @@ export default function SubtaskForm({
     return isNaN(d.getTime()) ? "" : d.toISOString().split("T")[0];
   };
 
+  // 🔥 ROLE-BASED ASSIGNEE FILTER
+  const filteredAssignees =
+    currentUserRole === UserRole.EMPLOYEE
+      ? assignees.filter((u) => u.id === currentUserId)
+      : assignees;
+
   return (
     <form
       action={dispatch}
       className="space-y-6 w-full max-w-3xl mx-auto bg-zGrey-2/30 text-zText p-6 rounded-xl border border-zGrey-3 backdrop-blur-md"
     >
-      {/* 🔥 Mandatory hidden fields */}
+      {/* Required hidden fields */}
       <input type="hidden" name="taskId" value={taskId} />
       <input type="hidden" name="projectId" value={projectId} />
 
       {isEdit && (
-        <input type="hidden" name="id" value={initialSubtask!.id} />
-      )}
-
-      {isEdit && (
-        <input
-          type="hidden"
-          name="assignedById"
-          value={initialSubtask!.assignedById ?? ""}
-        />
+        <>
+          <input type="hidden" name="id" value={initialSubtask!.id} />
+          <input
+            type="hidden"
+            name="assignedById"
+            value={initialSubtask!.assignedById ?? ""}
+          />
+        </>
       )}
 
       <div className="flex justify-between items-center border-b border-zGrey-3 pb-4 mb-4">
         <h2 className="text-xl font-semibold text-white">
           {isEdit ? (
-            <>Editing Subtask for: <span className="text-primaryRed">{taskName}</span></>
+            <>
+              Editing Subtask for:{" "}
+              <span className="text-primaryRed">{taskName}</span>
+            </>
           ) : (
-            <>New Subtask for: <span className="text-primaryRed">{taskName}</span></>
+            <>
+              New Subtask for:{" "}
+              <span className="text-primaryRed">{taskName}</span>
+            </>
           )}
         </h2>
 
-        {/* 🔥 Back to Project (Not Task!) */}
+        {/* Back to Task — cleaner UX */}
         <Link
           href={`/dashboard/projects/${projectId}`}
           className="text-sm font-medium text-primaryRed hover:underline"
         >
-          ← Back to Project
+          ← Back to Task
         </Link>
       </div>
 
+      {/* Messages */}
       {state.message && (
         <p
           className={`p-3 rounded text-sm ${
@@ -106,7 +122,7 @@ export default function SubtaskForm({
         </p>
       )}
 
-      {/* --- Name --- */}
+      {/* Name */}
       <div>
         <label className="block text-sm text-gray-300 mb-1">
           Subtask Name <span className="text-red-400">*</span>
@@ -121,7 +137,7 @@ export default function SubtaskForm({
         />
       </div>
 
-      {/* --- Description --- */}
+      {/* Description */}
       <div>
         <label className="block text-sm text-gray-300 mb-1">
           Description (optional)
@@ -135,7 +151,7 @@ export default function SubtaskForm({
         />
       </div>
 
-      {/* --- Assigned To --- */}
+      {/* Assigned To */}
       <div>
         <label className="block text-sm text-gray-300 mb-1">
           Assign To <span className="text-red-400">*</span>
@@ -149,7 +165,8 @@ export default function SubtaskForm({
           <option value="" disabled>
             Select assignee
           </option>
-          {assignees.map((user) => (
+
+          {filteredAssignees.map((user) => (
             <option key={user.id} value={user.id}>
               {user.name} ({user.role})
             </option>
@@ -157,10 +174,12 @@ export default function SubtaskForm({
         </select>
       </div>
 
-      {/* --- Dates + Status (Edit Only) --- */}
+      {/* Dates + Status */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm text-gray-300 mb-1">End Date / Deadline</label>
+          <label className="block text-sm text-gray-300 mb-1">
+            End Date / Deadline
+          </label>
           <input
             type="date"
             name="endDate"
@@ -197,15 +216,15 @@ export default function SubtaskForm({
                 name="statusReason"
                 rows={2}
                 defaultValue={initialSubtask?.statusReason || ""}
-                placeholder="Reason for current status..."
                 className="w-full rounded-lg bg-zGrey-3/50 border border-zGrey-4 px-3 py-2 text-white"
+                placeholder="Reason for current status..."
               />
             </div>
           </>
         )}
       </div>
 
-      {/* --- Submit --- */}
+      {/* Submit */}
       <button
         type="submit"
         className={`group relative w-full py-3 rounded-lg font-semibold transition-all duration-300 active:scale-[0.96] ${

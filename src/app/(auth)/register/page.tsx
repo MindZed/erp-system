@@ -1,78 +1,74 @@
-// src/app/register/page.tsx
-'use client';
-import { redirect } from 'next/navigation';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import AuthForm from '../../components/AuthForm'; // Import the reusable form
+// "use client";
 
-export default function RegisterPage() {
-  redirect("/login") //Currently we are not using the register option as we will create user on our own.
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+// import { useState } from "react";
 
-  // --- Handle Sign Up (Logic moved here) ---
-  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError(null);
-    const target = e.target as typeof e.target & {
-      name: { value: string };
-      email: { value: string };
-      password: { value: string };
-    };
-    const name = target.name.value;
-    const email = target.email.value;
-    const password = target.password.value;
+// export default function RegisterPage() {
+//   const [message, setMessage] = useState("");
 
-    // Client-side validation
-    if (!name || !email || !password) {
-        setError("Name, email and password are required.");
-        return;
-    }
+//   async function handleSubmit(e: any) {
+//     e.preventDefault();
 
-    try {
-      const res = await fetch('/api/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, email, password }),
-      });
+//     const formData = new FormData(e.target);
 
-      if (res.ok) {
-        // Registration successful! Redirect user back to the sign-in page.
-        alert(`Registration successful for ${name}! Please log in.`); 
-        router.push('/'); // Redirect to the homepage (Sign In page)
-      } else {
-        // Handle API errors (e.g., "User already exists")
-        const data = await res.json();
-        setError(data.message || 'Something went wrong during sign-up.');
-      }
-    } catch (err) {
-      console.error("Signup fetch error:", err);
-      setError('An unexpected error occurred. Please try again.');
-    }
-  };
+//     const res = await fetch("/api/register", {
+//       method: "POST",
+//       body: formData,
+//     });
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md space-y-6">
-        
-        {/* Pass the Sign Up flag and the handler */}
-        <AuthForm isSignUp onSubmit={handleSignUp} />
+//     const data = await res.json();
+//     setMessage(data.message);
+//   }
 
-        {error && <p className="text-center text-sm text-red-600">{error}</p>}
+//   return (
+//     <div className="min-h-screen flex items-center justify-center bg-zBlack text-white">
+//       <form
+//         onSubmit={handleSubmit}
+//         className="bg-zGrey-2 p-6 rounded-lg border border-zGrey-3 w-full max-w-md space-y-4"
+//       >
+//         <h2 className="text-2xl font-bold mb-4 text-center">Create Account</h2>
 
-        <p className="text-center text-sm text-gray-600">
-          Already have an account?
-          <Link
-            href="/login" // Link back to the login page
-            className="ml-1 font-medium text-blue-600 hover:text-blue-500"
-          >
-            Sign In
-          </Link>
-        </p>
-      </div>
-    </div>
-  );
-}
+//         {message && <p className="text-center text-zAccent">{message}</p>}
+
+//         <input
+//           type="text"
+//           name="name"
+//           placeholder="Your Name"
+//           required
+//           className="w-full px-3 py-2 rounded bg-zGrey-3 border border-zGrey-4"
+//         />
+
+//         <input
+//           type="email"
+//           name="email"
+//           placeholder="Email"
+//           required
+//           className="w-full px-3 py-2 rounded bg-zGrey-3 border border-zGrey-4"
+//         />
+
+//         <input
+//           type="password"
+//           name="password"
+//           placeholder="Password"
+//           required
+//           className="w-full px-3 py-2 rounded bg-zGrey-3 border border-zGrey-4"
+//         />
+
+//         <select
+//           name="role"
+//           className="w-full px-3 py-2 rounded bg-zGrey-3 border border-zGrey-4"
+//         >
+//           <option value="ADMIN">Admin</option>
+//           <option value="MANAGER">Manager</option>
+//           <option value="EMPLOYEE">Employee</option>
+//         </select>
+
+//         <button
+//           type="submit"
+//           className="w-full py-2 bg-zAccent rounded text-black font-bold"
+//         >
+//           Register
+//         </button>
+//       </form>
+//     </div>
+//   );
+// }
