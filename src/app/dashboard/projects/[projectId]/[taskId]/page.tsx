@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
-import { UserRole, TaskStatus } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import DeleteTargetButton from "@/app/components/crud/DeleteTargetButton";
@@ -22,10 +22,15 @@ const taskStatusStyles: Record<string, string> = {
   ON_HOLD: "bg-amber-500 text-orange-800",
 };
 
-export default async function TaskDetailPage({ params }: any) {
-  const resolvedParams = await Promise.resolve(params);
-  const { projectId, taskId } = resolvedParams;
+interface Props {
+  params: {
+    projectId: string;
+    taskId: string;
+  };
+}
 
+export default async function TaskDetailPage({ params }: Props) {
+  const { projectId, taskId } = params;
 
   const session = await auth();
   if (!session?.user) redirect("/login");
@@ -33,7 +38,7 @@ export default async function TaskDetailPage({ params }: any) {
   const userRole = (session.user as any).role as UserRole;
   const userId = session.user.id;
 
-  // ⭐ FETCH TASK (multi-members included)
+  // FETCH TASK
   const task = await prisma.task.findUnique({
     where: { id: taskId },
     select: {
@@ -64,8 +69,6 @@ export default async function TaskDetailPage({ params }: any) {
           endDate: true,
           updatedAt: true,
           assignedTo: { select: { id: true, name: true } },
-
-          // ⭐ FIXED
           createdBy: { select: { id: true, name: true } },
           assignedBy: { select: { name: true } },
         },
@@ -75,11 +78,9 @@ export default async function TaskDetailPage({ params }: any) {
 
   if (!task) redirect(`/dashboard/projects/${projectId}`);
 
-  // ⭐ RBAC RULES
   const isManagerOrAdmin = userRole === UserRole.ADMIN || userRole === UserRole.MANAGER;
   const isMember = task.members.some((m) => m.user.id === userId);
 
-  // Employee can only open tasks assigned to them
   if (userRole === UserRole.EMPLOYEE && !isMember) {
     return (
       <div className="p-6 text-red-500">
@@ -91,12 +92,10 @@ export default async function TaskDetailPage({ params }: any) {
     );
   }
 
-  // ⭐ Valid assignees = ONLY users assigned to this task
   const users = task.members.map((m) => m.user);
 
   return (
     <div className="p-8 bg-zBlack min-h-screen text-white">
-
       {/* Breadcrumb */}
       <Link href={`/dashboard/projects/${projectId}`} className="text-primaryRed text-sm">
         ← Back to {task.project.name}
@@ -188,7 +187,6 @@ export default async function TaskDetailPage({ params }: any) {
           ))}
         </tbody>
       </table>
-
     </div>
   );
 }

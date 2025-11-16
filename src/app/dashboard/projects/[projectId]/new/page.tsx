@@ -32,19 +32,23 @@ export default async function NewTaskPage(props: any) {
   // --------------------------
   // FETCH PROJECT
   // --------------------------
+  // --- Fetch project to know the assigned manager ---
   const project = await prisma.project.findUnique({
     where: { id: projectId },
-    select: { id: true, name: true },
+    select: { id: true, name: true, managerId: true },
   });
 
   if (!project) redirect("/dashboard/projects");
 
   // --------------------------
-  // FETCH ASSIGNABLE USERS (Manager + Employee)
+  // FETCH ASSIGNABLE USERS (Manager (project.managerId) + Employee)
   // --------------------------
   const users = await prisma.user.findMany({
     where: {
-      role: { in: [UserRole.MANAGER, UserRole.EMPLOYEE] },
+      OR: [
+        { role: UserRole.EMPLOYEE },
+        { id: project.managerId } // only THIS project’s manager
+      ]
     },
     select: { id: true, name: true, role: true },
     orderBy: { name: "asc" },

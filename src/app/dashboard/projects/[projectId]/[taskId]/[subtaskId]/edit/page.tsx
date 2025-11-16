@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import SubtaskForm from "../../components/SubtaskForm";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { TaskStatus, UserRole } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 import { auth } from "@/auth";
 
 export const metadata = {
@@ -12,17 +12,24 @@ export const metadata = {
   description: "Edit an existing subtask.",
 };
 
-export default async function EditSubtaskPage({ params }: any) {
-  const resolved = await Promise.resolve(params);
-  const { projectId, taskId, subtaskId } = resolved;
+interface Props {
+  params: {
+    projectId: string;
+    taskId: string;
+    subtaskId: string;
+  };
+}
 
+export default async function EditSubtaskPage({ params }: Props) {
+  const { projectId, taskId, subtaskId } = params;
 
   const session = await auth();
   if (!session?.user) redirect("/login");
+
   const currentUserId = session.user.id;
   const currentUserRole = (session.user as any).role as UserRole;
 
-  // ⭐ Fetch subtask
+  // Fetch subtask
   const subtask = await prisma.subtask.findUnique({
     where: { id: subtaskId },
     select: {
@@ -34,16 +41,15 @@ export default async function EditSubtaskPage({ params }: any) {
       status: true,
       statusReason: true,
 
-      createdById: true,   // ⭐ employee-only check depends on this
+      createdById: true,
       assignedById: true,
       taskId: true,
     },
   });
 
-
   if (!subtask) redirect(`/dashboard/projects/${projectId}`);
 
-  // ⭐ Fetch parent task WITH MEMBERS
+  // Fetch parent task
   const parentTask = await prisma.task.findUnique({
     where: { id: taskId },
     select: {
@@ -52,9 +58,7 @@ export default async function EditSubtaskPage({ params }: any) {
       projectId: true,
       members: {
         select: {
-          user: {
-            select: { id: true, name: true, role: true },
-          },
+          user: { select: { id: true, name: true, role: true } },
         },
       },
     },
@@ -66,7 +70,7 @@ export default async function EditSubtaskPage({ params }: any) {
 
   const taskName = parentTask.name;
 
-  // ⭐ Valid assignees = ONLY task members
+  // Valid assignees
   const filteredAssignees = parentTask.members.map((m) => m.user);
 
   const initialSubtask = {

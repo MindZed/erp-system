@@ -128,7 +128,7 @@ export default function DeleteTargetButton({
 
             <p className="mb-6 text-sm text-center">
               This action is <strong>IRREVERSIBLE</strong>. Type
-              <strong className="text-red-500"> "CONFIRM" </strong> to proceed.
+              <strong className="text-red-500"> &quot;CONFIRM&quot; </strong> to proceed.
             </p>
 
             <input
